@@ -36,7 +36,7 @@ export const UserList = ({ me, users, scores }) => {
       <div key={user.id} className={styles.user}>
         <div
           className={`${styles.name} ${isMe && styles.me}`}
-          onClick={() => window.confirm("Reset your name?") && resetName()}
+          onClick={() => isMe && window.confirm("Reset your name?") && resetName()}
         >
           {user.name} {isMe && "(You)"}
         </div>
