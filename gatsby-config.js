@@ -1,4 +1,6 @@
 module.exports = {
+  pathPrefix: `/planning-poker`,
+
   siteMetadata: {
     title: `Planning Poker`,
     description: 'Planning poker',
