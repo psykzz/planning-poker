@@ -1,10 +1,17 @@
 import React from "react"
+import { toast } from "react-toastify"
 import { resetScores } from "../../api/scores"
 
 import * as styles from "./moderatorcontrols.module.css"
 
 export const ModeratorControls = ({ session, showScores, toggleScores }) => {
   const [isModerator, setIsModerator] = React.useState(false)
+
+  React.useEffect(() => {
+    if (isModerator) {
+      toast("Enabled Moderator controls!")
+    }
+  }, [isModerator]);
 
   if (!isModerator) {
     return (
