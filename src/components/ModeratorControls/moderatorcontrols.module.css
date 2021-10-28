@@ -1,12 +1,13 @@
 
 .moderator_notice {
     color: var(--text-color-subtle);
+    margin: 32px 0;
 }
 
 .actions {
     display: flex;
     justify-content: center;
-    margin: 16px 0;
+    margin: 64px 0;
   }
 
 .actions > div {
