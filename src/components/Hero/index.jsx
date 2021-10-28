@@ -2,7 +2,6 @@ import React from "react"
 import { nanoid } from "nanoid"
 import { PlanningPoker } from "../PlanningPoker"
 import * as styles from "./hero.module.css"
-import { navigate } from "gatsby-link"
 
 export const Hero = () => {
   const [session, setSession] = React.useState("")
@@ -41,11 +40,18 @@ export const Hero = () => {
     localStorage.setItem("user", JSON.stringify(user))
   }, [user])
 
+  const createSession = () => {
+    if (typeof window === "undefined") {
+      return
+    }
+    window.location.href += `#${nanoid(7)}`;
+  }
+
   return (
     <div className={styles.content}>
       <h1>Planning Poker</h1>
       {!session ? (
-        <a href={`/planning-poker/#${nanoid(10)}`} className={styles.new_session}>
+        <a onClick={createSession} className={styles.new_session}>
           Start new session
         </a>
       ) : (
