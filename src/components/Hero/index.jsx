@@ -45,7 +45,7 @@ export const Hero = () => {
     <div className={styles.content}>
       <h1>Planning Poker</h1>
       {!session ? (
-        <a href={`#${nanoid(10)}`} className={styles.new_session}>
+        <a href={`/planning-poker/#${nanoid(10)}`} className={styles.new_session}>
           Start new session
         </a>
       ) : (
