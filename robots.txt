@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Sitemap: https://psykzz.github.io/sitemap/sitemap-index.xml
+Host: https://psykzz.github.io
