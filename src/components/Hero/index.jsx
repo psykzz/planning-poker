@@ -18,7 +18,7 @@ export const Hero = () => {
       return
     }
     let name = ""
-    while (name === "") {
+    while (name === "" || !name) {
       name = prompt("Please enter your name")
     }
     setUser({ name })
