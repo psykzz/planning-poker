@@ -1,0 +1,32 @@
+
+.moderator_notice {
+    color: var(--text-color-subtle);
+}
+
+.actions {
+    display: flex;
+    justify-content: center;
+    margin: 16px 0;
+  }
+
+.actions > div {
+    display: inline;
+    width: 100px;
+    padding: 30px 20px;
+    border-radius: 10%;
+    margin: 5px;
+    background-color: var(--bg-color);
+  }
+  .actions > div:hover {
+      background-color: var(--bg-color-2);
+    cursor: pointer;
+  }
+  
+  .reveal {
+    border: 1px solid var(--color-discord-blue);
+  }
+  
+  .reset {
+    border: 1px solid var(--color-warning-red);
+  }
+  

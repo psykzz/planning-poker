@@ -1,0 +1,46 @@
+@import url(https://fonts.googleapis.com/css?family=Open+Sans:400,600,700&display=swap);
+
+:root {
+  /*Primary colours*/
+  --bg-color: #f7f5eb;
+  --bg-color-2: #ebe9de;
+
+  --text-color: #333;
+  --text-color-subtle: #999;
+
+  /*Inverted colours*/
+  --inverted-bg-color: #333;
+  --inverted-text-color: #f7f5eb;
+
+  /*Fixed colours*/
+  --color-discord-blue: #7289da;
+  --color-warning-red: #f44336;
+}
+
+[data-theme="dark"] {
+  /*Primary colours*/
+  --bg-color: #333;
+  --bg-color-2: #404040;
+
+  --text-color: #f7f5eb;
+  --text-color-subtle: #999;
+
+  /*Inverted colours*/
+  --inverted-bg-color: #f7f5eb;
+  --inverted-text-color: #333;
+
+  /*Fixed colours*/
+  --color-discord-blue: #7289da;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Open Sans", Arial, sans-serif;
+  color: var(--text-color);
+  background: var(--bg-color);
+}

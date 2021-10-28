@@ -1,0 +1,34 @@
+
+.darkmode_toggle {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  height: 40px;
+  width: 80px;
+  background: var(--inverted-bg-color);
+  border-radius: 40px;
+  padding: 3px;
+  margin: auto;
+  cursor: pointer;
+}
+.darkmode_toggle::before {
+  content: '';
+  display: block;
+  height: 35px;
+  width: 35px;
+  border-radius: 30px;
+  background: var(--bg-color);
+  position: absolute;
+  z-index: 2;
+  transform: translate(0);
+  transition: transform ease-in-out;
+}
+/* .is_dark.darkmode_toggle {
+  background: var(--inverted-bg-color);
+}
+.is_dark.darkmode_toggle::before {
+  background: var(--bg-color);
+} */
+.is_dark.darkmode_toggle::before {
+  transform: translateX(40px);
+} 

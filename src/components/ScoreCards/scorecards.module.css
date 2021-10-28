@@ -1,0 +1,56 @@
+.card_container {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.options {
+  display: flex;
+  width: 100%;
+  justify-content: space-evenly;
+}
+
+.card {
+  display: inline-block;
+  height: 90px;
+  width: 60px;
+  padding-top: 33px;
+  border: 1px solid var(--text-color);
+  border-radius: 10%;
+  margin: 5px;
+  background-color: var(--bg-color);
+  cursor: pointer;
+}
+.card:hover:not(.no_hover) {
+    background-color: var(--bg-color-2);
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+}
+.actions > div {
+  display: inline;
+  width: 100px;
+  padding: 30px 20px;
+  border-radius: 10%;
+  margin: 5px;
+  background-color: var(--bg-color);
+}
+.actions > div:hover {
+    background-color: var(--bg-color-2);
+  cursor: pointer;
+}
+
+.reveal {
+  border: 1px solid var(--color-discord-blue);
+}
+
+.reset {
+  border: 1px solid var(--color-warning-red);
+}
+
+.moderator_notice {
+    color: var(--text-color-subtle);
+    margin: 16px 0;
+}
