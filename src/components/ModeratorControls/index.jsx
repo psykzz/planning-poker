@@ -11,7 +11,12 @@ export const ModeratorControls = ({ session, showScores, toggleScores }) => {
     if (isModerator) {
       toast("Enabled Moderator controls!")
     }
-  }, [isModerator]);
+  }, [isModerator])
+
+  const reset = React.useCallback(() => {
+    toggleScores(false) // Only change visuals
+    resetScores(session)
+  }, [session, toggleScores])
 
   if (!isModerator) {
     return (
@@ -30,16 +35,14 @@ export const ModeratorControls = ({ session, showScores, toggleScores }) => {
         className={styles.reveal}
         onClick={() =>
           window.confirm(`${showScores ? "Hide" : "Reveal"} all cards?`) &&
-          toggleScores(session)
+          toggleScores(true)
         }
       >
         {showScores ? "Hide" : "Reveal"}
       </div>
       <div
         className={styles.reset}
-        onClick={() =>
-          window.confirm("Reset all cards?") && resetScores(session)
-        }
+        onClick={() => window.confirm("Reset all cards?") && reset()}
       >
         Reset
       </div>

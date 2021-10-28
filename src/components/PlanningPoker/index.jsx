@@ -4,7 +4,6 @@ import { removeSubscription } from "../../api/client"
 import {
   getScores,
   onNewScores,
-  resetScores,
   updateAllScores,
 } from "../../api/scores"
 import {
@@ -24,13 +23,11 @@ function parseISOString(s) {
   return new Date(Date.UTC(b[0], --b[1], b[2], b[3], b[4], b[5], b[6]))
 }
 
-
 export const PlanningPoker = ({ session, user: localUser }) => {
   const [user, setUser] = React.useState()
   const [users, setUsers] = React.useState([])
   const [scores, setScores] = React.useState([])
-  const [showScores, setShowScores] = React.useState(false);
-
+  const [showScores, setShowScores] = React.useState(false)
 
   const updateUsers = async session => {
     const users = await getAllUsers(session)
@@ -119,11 +116,16 @@ export const PlanningPoker = ({ session, user: localUser }) => {
     }
   }, [user, session])
 
-  const toggleScores = () => {
-    console.log("Toggling scores", !showScores)
-    updateAllScores(session, !showScores)
-    setShowScores(!showScores);
-  }
+  const toggleScores = React.useCallback(
+    (updateScores = true) => {
+      console.log("Toggling scores", !showScores)
+      if (updateScores) {
+        updateAllScores(session, !showScores)
+      }
+      setShowScores(!showScores)
+    },
+    [session, showScores]
+  )
 
   return (
     <>

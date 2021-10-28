@@ -5,7 +5,7 @@ export const createUser = async (username, session) => {
     .from("users")
     .insert([{ name: username, session_name: session }])
 
-  if (error) {
+  if (error && !Array.isArray(error)) {
     throw new Error(JSON.stringify(error))
   }
 
@@ -19,7 +19,7 @@ export const updateUserPresence = async (userId, session, last_presence) => {
     .update({ last_presence, session_name: session })
     .eq("id", userId)
 
-  if (error) {
+  if (error && !Array.isArray(error)) {
     throw new Error(JSON.stringify(error))
   }
 }
@@ -30,7 +30,7 @@ export const getAllUsers = async session => {
     .select("*")
     .eq("session_name", session)
 
-  if (error) {
+  if (error && !Array.isArray(error)) {
     throw new Error(JSON.stringify(error))
   }
 
@@ -45,7 +45,7 @@ export const getUser = async userId => {
     .select("*")
     .eq("id", userId)
 
-  if (error) {
+  if (error && !Array.isArray(error)) {
     throw new Error(JSON.stringify(error))
   }
 
