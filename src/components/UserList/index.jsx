@@ -11,9 +11,15 @@ export const UserList = ({ me, users, scores }) => {
   // Stops the user list jumping around
   users?.sort((a, b) => a.id.localeCompare(b.id))
 
-  const Score = ({ user }) => {
-    const isMe = user.id === me?.id
-    const score = scoreByUser[user.id]
+  const resetName = () => {
+    if (typeof window === "undefined") {
+      return
+    }
+    localStorage.removeItem("user")
+    window.location.reload()
+  }
+
+  const Score = ({ isMe, score }) => {
     if (!score) {
       return <div className={styles.score}>-</div>
     }
@@ -23,15 +29,28 @@ export const UserList = ({ me, users, scores }) => {
     return <div className={styles.score}>{score.score}</div>
   }
 
+  const User = ({ user }) => {
+    const isMe = user.id === me?.id
+    const score = scoreByUser[user.id]
+    return (
+      <div key={user.id} className={styles.user}>
+        <div
+          className={`${styles.name} ${isMe && styles.me}`}
+          onClick={() => window.confirm("Reset your name?") && resetName()}
+        >
+          {user.name} {isMe && "(You)"}
+        </div>
+        <div className={`${styles.card} ${styles.no_hover}`}>
+          <Score {...{ isMe, score }} />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={styles.user_list}>
       {users?.map(user => (
-        <div key={user.id} className={styles.user}>
-          <div className={styles.name}>{user.name}</div>
-          <div className={`${styles.card} ${styles.no_hover}`}>
-            <Score user={user} />
-          </div>
-        </div>
+        <User key={user.id} user={user} />
       ))}
     </div>
   )

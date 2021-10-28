@@ -1,64 +1,72 @@
 .user_list {
-    margin: 64px 0;
+  margin: 64px 0;
 }
 
 .user {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    justify-content: space-evenly;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-evenly;
 }
 
 .name {
-    width: 200px;
-    font-size: 2rem;
+  width: 200px;
+  font-size: 2rem;
 }
 
+.me {
+  cursor: pointer;
+}
+.me:hover {
+  color: var(--text-color-subtle);
+}
 
 .card_container {
-    display: flex;
-    flex-direction: column;
-    text-align: center;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
 }
 
 .options {
-    display: flex;
-    width: 100%;
-    justify-content: space-evenly;
+  display: flex;
+  width: 100%;
+  justify-content: space-evenly;
 }
 
 .card {
-    --color-border: #ddd;
+  --color-border: #ddd;
 
-    display: inline-block;
-    height: 90px;
-    width: 60px;
-    padding-top: 33px;
-    border: 1px solid var(--text-color-subtle);
-    border-radius: 10%;
-    margin: 5px;
-    background-color: var(--bg-color-2);;
-    cursor: pointer;
+  display: inline-block;
+  height: 90px;
+  width: 60px;
+  padding-top: 33px;
+  border: 1px solid var(--text-color-subtle);
+  border-radius: 10%;
+  margin: 5px;
+  background-color: var(--bg-color-2);
+  cursor: pointer;
 }
 
 .card:hover:not(.no_hover) {
-    background-color: #666;
+  background-color: #666;
 }
 
-
+.score {
+    font-weight: 700;
+}
 
 .reset {
-    --color-border: #f00;
+  --color-border: #f00;
 
-    display: inline;
-    width: 100px;
-    padding: 30px 20px;
-    border: 1px solid var(--color-border);
-    border-radius: 10%;
-    margin: 5px;
-    background-color: #444;
+  display: inline;
+  width: 100px;
+  padding: 30px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 10%;
+  margin: 5px;
+  background-color: #444;
 }
 .reset:hover {
-    background-color: #666;
-    cursor: pointer;
+  background-color: #666;
+  cursor: pointer;
 }
