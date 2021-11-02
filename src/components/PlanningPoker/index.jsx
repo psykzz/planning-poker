@@ -133,7 +133,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
         <title>Planning Poker - {session}</title>
       </Helmet>
       <UserList me={user} users={users} scores={scores} />
-      <ScoreCards session={session} options={[0, 1, 1, 2, 3, 5, 8, 13, 21]} />
+      <ScoreCards session={session} options={[0, 1, 2, 3, 5, 8, 13, 21]} />
       <ModeratorControls {...{ session, showScores, toggleScores }} />
     </>
   )
