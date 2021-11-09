@@ -1,14 +1,14 @@
-import React from "react"
-import { resetScores, submitScore } from "../../api/scores"
+import React from 'react';
+import { resetScores, submitScore } from '../../api/scores';
 
-import * as styles from "./scorecards.module.css"
+import * as styles from './scorecards.module.css';
 
 export const ScoreCards = ({ options, session }) => {
   const onSelectCard = value => {
-    const user = JSON.parse(localStorage.getItem("user"))
-    if (!user.id) return
-    submitScore(user.id, session, value)
-  }
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user.id) return;
+    submitScore(user.id, session, value);
+  };
 
   return (
     <div className={styles.card_container}>
@@ -23,7 +23,6 @@ export const ScoreCards = ({ options, session }) => {
           </div>
         ))}
       </div>
-
     </div>
-  )
-}
+  );
+};

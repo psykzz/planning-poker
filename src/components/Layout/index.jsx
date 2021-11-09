@@ -1,12 +1,12 @@
-import React from "react"
-import { Helmet } from "react-helmet"
-import { toast, ToastContainer } from "react-toastify"
-import { DarkmodeToggle } from "../DarkmodeToggle"
-import { Footer } from "../Footer"
-import "./common.css"
-import "react-toastify/dist/ReactToastify.css"
+import React from 'react';
+import { Helmet } from 'react-helmet';
+import { toast, ToastContainer } from 'react-toastify';
+import { DarkmodeToggle } from '../DarkmodeToggle';
+import { Footer } from '../Footer';
+import './common.css';
+import 'react-toastify/dist/ReactToastify.css';
 
-import * as styles from "./layout.module.css"
+import * as styles from './layout.module.css';
 
 const Layout = ({ children }) => (
   <>
@@ -19,8 +19,8 @@ const Layout = ({ children }) => (
     <ToastContainer
       hideProgressBar={true}
       pauseOnHover={false}
-      position={"bottom-right"}
+      position={'bottom-right'}
     />
   </>
-)
-export default Layout
+);
+export default Layout;

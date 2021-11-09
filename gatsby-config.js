@@ -8,9 +8,9 @@ module.exports = {
     siteUrl: `https://psykzz.github.io/planning-poker`,
   },
   plugins: [
-    "gatsby-plugin-react-helmet",
-    "gatsby-plugin-nprogress",
-    "gatsby-plugin-sitemap",
-    "gatsby-plugin-robots-txt",
+    'gatsby-plugin-react-helmet',
+    'gatsby-plugin-nprogress',
+    'gatsby-plugin-sitemap',
+    'gatsby-plugin-robots-txt',
   ],
-}
+};

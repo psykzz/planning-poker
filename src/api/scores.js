@@ -1,59 +1,59 @@
-import { supabase } from "./client"
+import { supabase } from './client';
 
 export const submitScore = async (userId, session, score) => {
   const { error } = await supabase
-    .from("scores")
+    .from('scores')
     .upsert([
       { score, user_id: userId, session_name: session, updated_at: new Date() },
-    ])
+    ]);
 
   if (error && !Array.isArray(error)) {
-    throw new Error(JSON.stringify(error))
+    throw new Error(JSON.stringify(error));
   }
-}
+};
 
 export const resetScores = async session => {
   const { error } = await supabase
-    .from("scores")
+    .from('scores')
     .delete()
-    .match({ session_name: session })
+    .match({ session_name: session });
 
   if (error && !Array.isArray(error)) {
-    throw new Error(JSON.stringify(error))
+    throw new Error(JSON.stringify(error));
   }
-}
+};
 
 export const updateAllScores = async (session, revealed) => {
   const { error } = await supabase
-    .from("scores")
+    .from('scores')
     .update({ revealed })
-    .eq("session_name", session)
+    .eq('session_name', session);
 
   if (error && !Array.isArray(error)) {
-    throw new Error(JSON.stringify(error))
+    throw new Error(JSON.stringify(error));
   }
-}
+};
 export const getScores = async session => {
   const { data: scores, error } = await supabase
-    .from("scores")
-    .select("user_id,score")
-    .eq("session_name", session)
+    .from('scores')
+    .select('user_id,score')
+    .eq('session_name', session);
 
   if (error && !Array.isArray(error)) {
-    throw new Error(JSON.stringify(error))
+    throw new Error(JSON.stringify(error));
   }
 
-  return scores
-}
+  return scores;
+};
 
 export const onNewScores = (session, callback) => {
   const subscription = supabase
-    .from("scores")
-    .on("*", payload => {
-      console.log("Change received!", payload)
-      callback(payload)
+    .from('scores')
+    .on('*', payload => {
+      console.log('Change received!', payload);
+      callback(payload);
     })
-    .subscribe()
+    .subscribe();
 
-  return subscription
-}
+  return subscription;
+};
