@@ -48,7 +48,7 @@ export const Hero = () => {
   }
 
   return (
-    <div className={styles.content}>
+    <div className={`${styles.content} ${!session ? 'has_session' : ''}`}>
       <h1>Planning Poker</h1>
       {!session ? (
         <a onClick={createSession} className={styles.new_session}>

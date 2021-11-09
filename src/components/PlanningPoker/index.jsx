@@ -111,10 +111,14 @@ export const PlanningPoker = ({ session, user: localUser }) => {
     }, 10000)
     // trigger one now
     updatePresence(session, user)
-    return () => {
-      clearInterval(interval)
-    }
+    return () => clearInterval(interval)
   }, [user, session])
+
+  React.useEffect(() => {
+    const onFocus = () => updatePresence(session, user)
+    window.addEventListener('focus', onFocus);
+    return () =>  window.removeEventListener('focus', onFocus)
+  }, [user, session]);
 
   const toggleScores = React.useCallback(
     (updateScores = true) => {

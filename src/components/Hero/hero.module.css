@@ -9,6 +9,10 @@
   text-align: center;
 }
 
+.content.has_session {
+  margin-top: 10vh;
+}
+
 .new_session {
   margin-top: 2rem;
   background: var(--color-discord-blue);
