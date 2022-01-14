@@ -3,16 +3,14 @@ import { Helmet } from 'react-helmet';
 import { removeSubscription } from '../../api/client';
 import { getScores, onNewScores, updateAllScores } from '../../api/scores';
 import {
+  createUser,
   getAllUsers,
   getUser,
-  createUser,
   updateUserPresence,
 } from '../../api/users';
 import { ModeratorControls } from '../ModeratorControls';
 import { ScoreCards } from '../ScoreCards';
 import { UserList } from '../UserList';
-
-import * as styles from './planningpoker.module.css';
 
 function parseISOString(s) {
   var b = s.split(/\D+/);
@@ -117,9 +115,9 @@ export const PlanningPoker = ({ session, user: localUser }) => {
   }, [user, session]);
 
   const toggleScores = React.useCallback(
-    (updateScores = true) => {
+    (shouldUpdateAllScores = true) => {
       console.log('Toggling scores', !showScores);
-      if (updateScores) {
+      if (shouldUpdateAllScores) {
         updateAllScores(session, !showScores);
       }
       setShowScores(!showScores);
