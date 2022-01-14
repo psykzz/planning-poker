@@ -4,7 +4,7 @@ export const submitScore = async (userId, session, score) => {
   const { error } = await supabase
     .from('scores')
     .upsert([
-      { score, user_id: userId, session_name: session, updated_at: new Date() },
+      { score, user_id: userId, session_name: session, updated_at: new Date(), revealed: false },
     ]);
 
   if (error && !Array.isArray(error)) {
