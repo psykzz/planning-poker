@@ -36,7 +36,7 @@ export const updateAllScores = async (session, revealed) => {
 export const getScores = async session => {
   const { data: scores, error } = await supabase
     .from('scores')
-    .select('user_id,score')
+    .select('user_id,score,revealed')
     .eq('session_name', session);
 
   if (error && !Array.isArray(error)) {
