@@ -11,6 +11,9 @@ const standardDeviation = array => {
   );
 };
 
+const average = arr => arr.reduce( ( p, c ) => p + c, 0 ) / arr.length;
+
+
 export const UserList = ({ me, users, scores }) => {
   let lowest = React.useMemo(
     () => Math.min(...scores.map(score => score.score)),
@@ -22,6 +25,10 @@ export const UserList = ({ me, users, scores }) => {
   );
   let stddev = React.useMemo(
     () => standardDeviation(scores.map(score => score.score)),
+    [scores]
+  );
+  let avg = React.useMemo(
+    () => average(scores.map(score => score.score)),
     [scores]
   );
   const scoreByUser = {};
@@ -84,6 +91,7 @@ export const UserList = ({ me, users, scores }) => {
           <div>Highest: {highest}</div>
           <div>Lowest: {lowest}</div>
           <div>Std Dev: {stddev}</div>
+          <div>Average: {avg}</div>
         </div>
       )}
     </div>
