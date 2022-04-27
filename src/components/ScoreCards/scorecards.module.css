@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   text-align: center;
+  margin-top: 64px;
 }
 
 .options {
@@ -11,10 +12,11 @@
 }
 
 .card {
-  display: inline-block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   height: 90px;
   width: 60px;
-  padding-top: 33px;
   border: 1px solid var(--text-color);
   border-radius: 10%;
   margin: 5px;
@@ -22,7 +24,7 @@
   cursor: pointer;
 }
 .card:hover:not(.no_hover) {
-    background-color: var(--bg-color-2);
+  background-color: var(--bg-color-2);
 }
 
 .actions {
@@ -38,7 +40,7 @@
   background-color: var(--bg-color);
 }
 .actions > div:hover {
-    background-color: var(--bg-color-2);
+  background-color: var(--bg-color-2);
   cursor: pointer;
 }
 
@@ -51,6 +53,26 @@
 }
 
 .moderator_notice {
-    color: var(--text-color-subtle);
-    margin: 16px 0;
+  color: var(--text-color-subtle);
+  margin: 16px 0;
+}
+
+@media (max-width: 768px) {
+  .card_container {
+    margin-top: 16px;
+  }
+  .options {
+    display: flex;
+    width: 100vw;
+    overflow: hidden;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+  }
+
+  .card {
+    flex: 0;
+    min-width: 100px;
+    min-height: 150px;
+    font-size: 2rem;
+  }
 }

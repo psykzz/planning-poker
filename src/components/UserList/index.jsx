@@ -1,5 +1,4 @@
 import React from 'react';
-
 import * as styles from './userlist.module.css';
 
 const standardDeviation = array => {
@@ -11,10 +10,10 @@ const standardDeviation = array => {
   );
 };
 
-const average = arr => arr.reduce( ( p, c ) => p + c, 0 ) / arr.length;
-
+const average = arr => arr.reduce((p, c) => p + c, 0) / arr.length;
 
 export const UserList = ({ me, users, scores }) => {
+  const [vibrating, setVibrating] = React.useState(false);
   let lowest = React.useMemo(
     () => Math.min(...scores.map(score => score.score)),
     [scores]
@@ -37,6 +36,20 @@ export const UserList = ({ me, users, scores }) => {
   });
 
   const showScores = scores.length && scores.every(score => score.revealed);
+
+  // Vibration effect
+  // useVibrate(vibrating, [100, 0, 100]);
+  // let timer = null;
+  // React.useEffect(() => {
+  //   if (!timer && showScores) {
+  //     setVibrating(true);
+  //     timer = setTimeout(() => {
+  //       setVibrating(false);
+  //     }, 1000);
+  //   } else if (timer && !showScores) {
+  //     clearTimeout(timer);
+  //   }
+  // }, [showScores]);
 
   // Stops the user list jumping around
   users?.sort((a, b) => a.id.localeCompare(b.id));
@@ -63,7 +76,7 @@ export const UserList = ({ me, users, scores }) => {
     const isMe = user.id === me?.id;
     const score = scoreByUser[user.id];
     return (
-      <div key={user.id} className={styles.user}>
+      <div key={user.id} className={`${styles.user} ${isMe && styles.self}`}>
         <div
           className={`${styles.name} ${isMe && styles.me}`}
           onClick={() =>
@@ -80,7 +93,7 @@ export const UserList = ({ me, users, scores }) => {
   };
 
   return (
-    <div className={styles.user_list}>
+    <div className={`${styles.user_list} ${showScores && styles.show_scores}`}>
       {users?.map(user => (
         <User key={user.id} user={user} />
       ))}

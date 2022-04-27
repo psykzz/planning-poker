@@ -1,0 +1,4 @@
+.copy_notice {
+  color: var(--text-color-subtle);
+  cursor: pointer;
+}

@@ -1,7 +1,6 @@
 import React from 'react';
 import { toast } from 'react-toastify';
 import { resetScores } from '../../api/scores';
-
 import * as styles from './moderatorcontrols.module.css';
 
 export const ModeratorControls = ({ session, showScores, toggleScores }) => {

@@ -1,5 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet';
+import { toast } from 'react-toastify';
+import { useCopyToClipboard } from 'react-use';
 import { removeSubscription } from '../../api/client';
 import { getScores, onNewScores, updateAllScores } from '../../api/scores';
 import {
@@ -11,17 +13,39 @@ import {
 import { ModeratorControls } from '../ModeratorControls';
 import { ScoreCards } from '../ScoreCards';
 import { UserList } from '../UserList';
+import * as styles from './planningpoker.module.css';
 
 function parseISOString(s) {
   var b = s.split(/\D+/);
   return new Date(Date.UTC(b[0], --b[1], b[2], b[3], b[4], b[5], b[6]));
 }
 
+const CopySession = session => {
+  const [state, copyToClipboard] = useCopyToClipboard();
+  console.log({ session });
+  const copySessionId = React.useCallback(
+    () =>
+      copyToClipboard(
+        `${window.location.origin}${window.location.pathname}#${session.sessionId}`
+      ),
+    [session]
+  );
+  React.useEffect(() => {
+    state.value && toast.success(`Copied ${state.value}!`);
+  }, [state]);
+  return (
+    <div className={styles.copy_notice} onClick={copySessionId}>
+      click to copy url
+    </div>
+  );
+};
+
 export const PlanningPoker = ({ session, user: localUser }) => {
   const [user, setUser] = React.useState();
   const [users, setUsers] = React.useState([]);
   const [scores, setScores] = React.useState([]);
-  const [showScores, setShowScores] = React.useState(false);
+
+  const showScores = scores.length && scores.every(score => score.revealed);
 
   const updateUsers = async session => {
     const users = await getAllUsers(session);
@@ -120,7 +144,6 @@ export const PlanningPoker = ({ session, user: localUser }) => {
       if (shouldUpdateAllScores) {
         updateAllScores(session, !showScores);
       }
-      setShowScores(!showScores);
     },
     [session, showScores]
   );
@@ -130,6 +153,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
       <Helmet>
         <title>Planning Poker - {session}</title>
       </Helmet>
+      <CopySession sessionId={session} />
       <UserList me={user} users={users} scores={scores} />
       <ScoreCards session={session} options={[0, 1, 2, 3, 5, 8, 13, 21]} />
       <ModeratorControls {...{ session, showScores, toggleScores }} />

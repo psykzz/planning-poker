@@ -1,5 +1,21 @@
 .user_list {
-  margin: 64px 0;
+  margin-top: 64px;
+}
+
+@media (max-width: 768px) {
+  .user_list {
+    margin-top: 16px;
+  }
+  .user_list:not(.show_scores) .user:not(.self) {
+    display: none;
+  }
+  .show_scores {
+    display: initial;
+  }
+
+  .averages {
+    display: none;
+  }
 }
 
 .averages {
@@ -49,10 +65,13 @@
 .card {
   --color-border: #ddd;
 
-  display: inline-block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
   height: 90px;
   width: 60px;
-  padding-top: 33px;
+
   border: 1px solid var(--text-color-subtle);
   border-radius: 10%;
   margin: 5px;
@@ -65,7 +84,7 @@
 }
 
 .score {
-    font-weight: 700;
+  font-weight: 700;
 }
 
 .reset {

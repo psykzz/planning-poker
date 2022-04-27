@@ -15,9 +15,11 @@
   /*Fixed colours*/
   --color-discord-blue: #7289da;
   --color-warning-red: #f44336;
+
+  --display-mobile-breakpoint: 768px;
 }
 
-[data-theme="dark"] {
+[data-theme='dark'] {
   /*Primary colours*/
   --bg-color: #333;
   --bg-color-2: #404040;
@@ -40,7 +42,7 @@
 }
 
 body {
-  font-family: "Open Sans", Arial, sans-serif;
+  font-family: 'Open Sans', Arial, sans-serif;
   color: var(--text-color);
   background: var(--bg-color);
 }
