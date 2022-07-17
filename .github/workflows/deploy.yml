@@ -27,7 +27,7 @@ jobs:
           node-version: '14'
           cache: 'npm'
       - run: npm ci --prefer-offline --no-audit # ci == install, prefer offline prefers cache, no audit avoids wasted calls
-      - run: npm run build
+      - run: npm run build:github
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
