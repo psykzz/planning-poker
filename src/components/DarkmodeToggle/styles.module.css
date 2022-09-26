@@ -3,8 +3,8 @@
   position: absolute;
   top: 5px;
   right: 5px;
-  height: 40px;
-  width: 80px;
+  height: 1.5rem;
+  width: 3rem;
   background: var(--inverted-bg-color);
   border-radius: 40px;
   padding: 3px;
@@ -14,9 +14,9 @@
 .darkmode_toggle::before {
   content: '';
   display: block;
-  height: 35px;
-  width: 35px;
-  border-radius: 30px;
+  height: calc(1.5rem - 6px);
+  width: calc(1.5rem - 6px);
+  border-radius: 100%;
   background: var(--bg-color);
   position: absolute;
   z-index: 2;
@@ -30,5 +30,5 @@
   background: var(--bg-color);
 } */
 .is_dark.darkmode_toggle::before {
-  transform: translateX(40px);
+  transform: translateX(1.5rem);
 } 
