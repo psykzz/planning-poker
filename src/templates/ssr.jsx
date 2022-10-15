@@ -1,4 +1,4 @@
-import React from 'React';
+import React from 'react';
 
 const TestTemplate = ({ serverData }) => {
   return <pre>{JSON.stringify(serverData, null, 2)}</pre>;
