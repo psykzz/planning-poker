@@ -1,0 +1,4 @@
+
+## Created with gatsby-plugin-netlify
+/ssr  /.netlify/functions/__ssr  200
+/page-data/ssr/page-data.json  /.netlify/functions/__ssr  200
