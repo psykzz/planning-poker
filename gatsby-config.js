@@ -7,10 +7,10 @@ module.exports = {
     author: '@psykzz',
     siteUrl: `https://psykzz.github.io/planning-poker`,
   },
-  plugins: [
-    'gatsby-plugin-react-helmet',
-    'gatsby-plugin-nprogress',
-    'gatsby-plugin-sitemap',
-    'gatsby-plugin-robots-txt',
-  ],
+
+  flags: {
+    FAST_DEV: true,
+  },
+
+  plugins: [],
 };

@@ -8,3 +8,7 @@ const Index = () => (
   </Layout>
 );
 export default Index;
+
+export const Head = () => {
+  return <title>Planning Poker</title>;
+};

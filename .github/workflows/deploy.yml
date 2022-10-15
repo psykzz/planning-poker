@@ -21,12 +21,12 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: '14'
+          node-version: '16'
           cache: 'npm'
-      - run: npm ci --prefer-offline --no-audit # ci == install, prefer offline prefers cache, no audit avoids wasted calls
+      - run: npm ci --prefer-offline --no-audit
       - run: npm run build:prefixed
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
