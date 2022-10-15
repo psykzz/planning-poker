@@ -12,5 +12,5 @@ module.exports = {
     FAST_DEV: true,
   },
 
-  plugins: [],
+  plugins: ['gatsby-plugin-netlify'],
 };

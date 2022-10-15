@@ -16,8 +16,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^1.25.1",
-    "gatsby": "^5.0.0-next.2",
-    "gatsby-source-filesystem": "^5.0.0-next.0",
+    "gatsby": "^4.24.4",
+    "gatsby-plugin-netlify": "^5.0.1",
+    "gatsby-source-filesystem": "^4.24.4",
     "nanoid": "^3.1.30",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
