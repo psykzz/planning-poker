@@ -5,7 +5,7 @@ const TestTemplate = ({ serverData }) => {
   return <>
     <pre>{JSON.stringify(serverData, null, 2)}</pre>
     <hr />
-    <div style={{}}>{serverData.hours}:{serverData.minutes}</div>
+    <div style={{fontSize: '10rem', fontFamily: 'fantasy'}}>{serverData.hours}:{serverData.minutes}:{serverData.seconds}</div>
   </>;
 };
 
@@ -24,7 +24,8 @@ export const getServerData = async ({ query }) => {
     props: {
       time: data.utc_datetime,
       hours: now.getHours(),
-      minutes: ('0'+now.getMinutes()).slice(-2);
+      minutes: ('0'+now.getMinutes()).slice(-2),
+      seconds: ('0'+now.getSeconds()).slice(-2),
     },
     
     // Add cache control headers
