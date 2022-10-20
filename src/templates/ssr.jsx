@@ -5,7 +5,9 @@ const TestTemplate = ({ serverData }) => {
   return <>
     <pre>{JSON.stringify(serverData, null, 2)}</pre>
     <hr />
-    <div style={{fontSize: '10rem', fontFamily: 'fantasy'}}>{serverData.hours}:{serverData.minutes}:{serverData.seconds}</div>
+    <div style={{fontSize: '10rem', fontFamily: 'sans-serif'}}>
+      {serverData.hours}:{serverData.minutes}:{serverData.seconds}
+    </div>
   </>;
 };
 
