@@ -1,2 +1,0 @@
-"use strict";(self.webpackChunkplanning_poker=self.webpackChunkplanning_poker||[]).push([[630],{9128:function(e,n,r){r.r(n);var t=r(7294);n.default=function(e){var n=e.serverData;return t.createElement(t.Fragment,null,t.createElement("pre",null,JSON.stringify(n,null,2)),t.createElement("hr",null),t.createElement("div",{style:{}},n.hours,":",n.minutes))}}}]);
-//# sourceMappingURL=component---src-templates-ssr-jsx-559faae5ade2597e4311.js.map
