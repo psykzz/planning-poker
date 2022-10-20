@@ -1,2 +1,0 @@
-"use strict";(self.webpackChunkplanning_poker=self.webpackChunkplanning_poker||[]).push([[630],{9128:function(n,e,r){r.r(e);var a=r(7294);e.default=function(n){var e=n.serverData;return a.createElement("pre",null,JSON.stringify(e,null,2))}}}]);
-//# sourceMappingURL=component---src-templates-ssr-jsx-81f1743f0a12695705e5.js.map
