@@ -17,14 +17,14 @@ export const getServerData = async ({ query }) => {
     
   
   // Process it
-  const date = new Date(data.datetime);
+  const now = new Date(data.datetime);
   
   // Return object with optional { props, headers, status } 
   return {
     props: {
       time: data.utc_datetime,
-      hours: date.getHours(),
-      minutes: date.getMinutes(),
+      hours: now.getHours(),
+      minutes: ('0'+now.getMinutes()).slice(-2);
     },
     
     // Add cache control headers
