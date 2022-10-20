@@ -9,7 +9,7 @@ const TestTemplate = ({ serverData }) => {
   </>;
 };
 
-export const getServerData = async () => {
+export const getServerData = async ({ query }) => {
   // Fetch some data
   const data = await (
     await fetch('http://worldtimeapi.org/api/timezone/Europe/Dublin')
@@ -33,7 +33,7 @@ export const getServerData = async () => {
     // state-while-revalidate == time to serve stale request
     headers: {
       'Cache-Control':
-        'public, max-age=5, s-maxage=15, stale-while-revalidate=30',
+        `public, max-age=${query.age ?? 5}, s-maxage=${query.sage ?? 15}, stale-while-revalidate=${query.swr ?? 30}`,
     },
   };
 };
