@@ -13,7 +13,7 @@ export const getServerData = async () => {
     await fetch('http://worldtimeapi.org/api/timezone/Europe/Dublin')
   ).json();
     
-  const date = new Date(data.utc_datetime);
+  const date = new Date(data.datetime);
   
   return {
     props: {
