@@ -1,14 +1,11 @@
 import React from 'react';
 
 // Component for rendering, doing nothing special.
-const TestTemplate = ({ serverData, ...rest }) => {
+const TestTemplate = ({ serverData }) => {
   const [apiData, setApiData] = React.useState();
 
   React.useEffect(() => {
-    const params = new URLSearchParams();
-    params.set('age', rest.params.age ?? 5);
-    params.set('sage', rest.params.sage ?? 15);
-    params.set('swr', rest.params.swr ?? 30);
+    const params = new URLSearchParams(window.location.search);
     fetch(`https://poker.psykzz.dev/api/time?${params}`).then(res =>
       res.json().then(data => setApiData(data))
     );
