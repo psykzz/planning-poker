@@ -15,7 +15,7 @@ const TestTemplate = ({ serverData }) => {
 
 export const getServerData = async ({ query }) => {
   // Fetch some data
-  const data = await (await fetch('/api/time')).json();
+  const data = await (await fetch('https://poker.psykzz.dev/api/time')).json();
 
   // Process it
   const now = new Date(data.datetime);

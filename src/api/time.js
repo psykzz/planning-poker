@@ -1,5 +1,4 @@
-import fetch from 'cross-fetch';
-
+import 'cross-fetch/polyfill';
 export default async function handler(req, res) {
   res.setHeader(
     'Cache-Control',
