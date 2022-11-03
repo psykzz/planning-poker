@@ -1,7 +1,19 @@
 import React from 'react';
 
 // Component for rendering, doing nothing special.
-const TestTemplate = ({ serverData }) => {
+const TestTemplate = ({ serverData, ...rest }) => {
+  const [apiData, setApiData] = React.useState();
+
+  React.useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('age', rest.params.age ?? 5);
+    params.set('sage', rest.params.sage ?? 15);
+    params.set('swr', rest.params.swr ?? 30);
+    fetch(`https://poker.psykzz.dev/api/time?${params}`).then(res =>
+      setApiData(res.json())
+    );
+  }, []);
+
   return (
     <>
       <pre>{JSON.stringify(serverData, null, 2)}</pre>
@@ -9,12 +21,17 @@ const TestTemplate = ({ serverData }) => {
       <div style={{ fontSize: '10rem', fontFamily: 'sans-serif' }}>
         {serverData.hours}:{serverData.minutes}:{serverData.seconds}
       </div>
+      <hr />
+      <div>
+        <h4>API Time</h4>
+        <pre>{apiData && JSON.stringify(apiData, null, 2)}</pre>
+      </div>
     </>
   );
 };
 
 export const getServerData = async ({ query }) => {
-  // Fetch some data, appending our params
+  // Fetch some data
   const params = new URLSearchParams();
   params.set('age', query.age ?? 5);
   params.set('sage', query.sage ?? 15);
@@ -33,6 +50,10 @@ export const getServerData = async ({ query }) => {
       hours: now.getHours(),
       minutes: ('0' + now.getMinutes()).slice(-2),
       seconds: ('0' + now.getSeconds()).slice(-2),
+
+      age: query.age ?? 5,
+      sage: query.sage ?? 15,
+      swr: query.swr ?? 30,
     },
 
     // Add cache control headers
