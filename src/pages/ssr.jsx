@@ -10,7 +10,7 @@ const TestTemplate = ({ serverData, ...rest }) => {
     params.set('sage', rest.params.sage ?? 15);
     params.set('swr', rest.params.swr ?? 30);
     fetch(`https://poker.psykzz.dev/api/time?${params}`).then(res =>
-      setApiData(res.json())
+      res.json().then(data => setApiData(data))
     );
   }, []);
 
