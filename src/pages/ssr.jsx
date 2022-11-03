@@ -14,8 +14,14 @@ const TestTemplate = ({ serverData }) => {
 };
 
 export const getServerData = async ({ query }) => {
-  // Fetch some data
-  const data = await (await fetch('https://poker.psykzz.dev/api/time')).json();
+  // Fetch some data, appending our params
+  const params = new URLSearchParams();
+  params.set('age', query.age ?? 5);
+  params.set('sage', query.sage ?? 15);
+  params.set('swr', query.swr ?? 30);
+  const data = await (
+    await fetch(`https://poker.psykzz.dev/api/time?${params}`)
+  ).json();
 
   // Process it
   const now = new Date(data.datetime);
@@ -27,10 +33,6 @@ export const getServerData = async ({ query }) => {
       hours: now.getHours(),
       minutes: ('0' + now.getMinutes()).slice(-2),
       seconds: ('0' + now.getSeconds()).slice(-2),
-
-      age: query.age ?? 5,
-      sage: query.sage ?? 15,
-      swr: query.swr ?? 30,
     },
 
     // Add cache control headers
