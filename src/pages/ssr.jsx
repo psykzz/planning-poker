@@ -23,6 +23,11 @@ const TestTemplate = ({ serverData }) => {
         <h4>API Time</h4>
         <pre>{apiData && JSON.stringify(apiData, null, 2)}</pre>
       </div>
+      {apiData && (
+        <div style={{ fontSize: '10rem', fontFamily: 'sans-serif' }}>
+          {apiData.datetime.split('T')[1].split('.')[0]}
+        </div>
+      )}
     </>
   );
 };
