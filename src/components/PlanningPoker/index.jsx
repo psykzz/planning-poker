@@ -155,7 +155,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
       </Helmet>
       <CopySession sessionId={session} />
       <UserList me={user} users={users} scores={scores} />
-      <ScoreCards session={session} options={[0, 1, 2, 3, 5, 8, 13, 21]} />
+      <ScoreCards session={session} options={[0, 1, 2, 3, 5, 8]} />
       <ModeratorControls {...{ session, showScores, toggleScores }} />
     </>
   );
