@@ -15,6 +15,8 @@ import { ScoreCards } from '../ScoreCards';
 import { UserList } from '../UserList';
 import * as styles from './planningpoker.module.css';
 
+const POINTS = [1, 2, 3, 5, 8, 13];
+
 function parseISOString(s) {
   var b = s.split(/\D+/);
   return new Date(Date.UTC(b[0], --b[1], b[2], b[3], b[4], b[5], b[6]));
@@ -155,7 +157,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
       </Helmet>
       <CopySession sessionId={session} />
       <UserList me={user} users={users} scores={scores} />
-      <ScoreCards session={session} options={[0, 1, 2, 3, 5, 8]} />
+      <ScoreCards session={session} options={POINTS} />
       <ModeratorControls {...{ session, showScores, toggleScores }} />
     </>
   );
