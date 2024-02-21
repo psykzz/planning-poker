@@ -15,7 +15,9 @@ import { ScoreCards } from '../ScoreCards';
 import { UserList } from '../UserList';
 import * as styles from './planningpoker.module.css';
 
-const POINTS = [1, 2, 3, 5, 8, 13];
+// This is a special value that will trigger deleteing a score.
+const REMOVE_SCORE = "-";
+const POINTS = [REMOVE_SCORE, 1, 2, 3, 5, 8, 13];
 
 function parseISOString(s) {
   var b = s.split(/\D+/);
