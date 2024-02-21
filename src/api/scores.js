@@ -12,6 +12,18 @@ export const submitScore = async (userId, session, score) => {
   }
 };
 
+export const deleteScore = async (userId, session) => {
+  const { error } = await supabase
+    .from('scores')
+    .delete()
+    .match({ session_name: session, user_id: userId });
+
+  if (error && !Array.isArray(error)) {
+    throw new Error(JSON.stringify(error));
+  }
+};
+
+
 export const resetScores = async session => {
   const { error } = await supabase
     .from('scores')
