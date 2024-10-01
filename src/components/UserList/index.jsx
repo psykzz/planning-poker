@@ -56,7 +56,7 @@ export const UserList = ({ me, users, scores }) => {
   try {
     if (showScores) {
       // Try to sort by score as well.
-      users?.sort((a,b) => (scoreByUser[a.id]?.score ?? 0) - (scoreByUser[b.id]?.score ?? 0));
+      users?.sort((a,b) => (scoreByUser[b.id]?.score ?? 0) - (scoreByUser[a.id]?.score ?? 0));
     }
   } catch (e) { console.error(e); }
   console.log({users})
