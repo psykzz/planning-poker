@@ -56,7 +56,7 @@ export const UserList = ({ me, users, scores }) => {
   try {
     // Try to sort by score as well.
     users?.sort((a,b) => (scoreByUser?.[a.id] ?? 0) > (scoreByUser?.[b.id] ?? 0));
-  catch (e) { console.error(e); }
+  } catch (e) { console.error(e); }
   const resetName = () => {
     if (typeof window === 'undefined') {
       return;
