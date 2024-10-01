@@ -54,8 +54,10 @@ export const UserList = ({ me, users, scores }) => {
   // Stops the user list jumping around
   users?.sort((a, b) => a.id.localeCompare(b.id));
   try {
-    // Try to sort by score as well.
-    users?.sort((a,b) => (scoreByUser[a.id]?.score ?? 0) - (scoreByUser[b.id]?.score ?? 0));
+    if (showScores) {
+      // Try to sort by score as well.
+      users?.sort((a,b) => (scoreByUser[a.id]?.score ?? 0) - (scoreByUser[b.id]?.score ?? 0));
+    }
   } catch (e) { console.error(e); }
   console.log({users})
   
