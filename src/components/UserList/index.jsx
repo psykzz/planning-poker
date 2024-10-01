@@ -53,7 +53,10 @@ export const UserList = ({ me, users, scores }) => {
 
   // Stops the user list jumping around
   users?.sort((a, b) => a.id.localeCompare(b.id));
-
+  try {
+    // Try to sort by score as well.
+    users?.sort((a,b) => (scoreByUser?.[a.id] ?? 0) > (scoreByUser?.[b.id] ?? 0));
+  catch (e) { console.error(e); }
   const resetName = () => {
     if (typeof window === 'undefined') {
       return;
