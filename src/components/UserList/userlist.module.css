@@ -2,7 +2,7 @@
   margin-top: 64px;
 }
 
-.two_column {
+.two_columns {
   /* support for multi column */
   display: grid;
   grid-auto-rows: 1fr;
@@ -15,7 +15,7 @@
     margin-top: 16px;
   }
 
-  .two_column {
+  .two_columns {
     display: block;
   }
 
