@@ -2,13 +2,27 @@
   margin-top: 64px;
 }
 
+.two_columns {
+  /* support for multi column */
+  display: grid;
+  grid-auto-rows: 1fr;
+  grid-template-columns: 1fr 1fr;
+  gap: 0px 0px;
+}
+
 @media (max-width: 768px) {
   .user_list {
     margin-top: 16px;
   }
+
+  .two_columns {
+    display: block;
+  }
+
   .user_list:not(.show_scores) .user:not(.self) {
     display: none;
   }
+
   .show_scores {
     display: initial;
   }
@@ -46,6 +60,7 @@
 .me {
   cursor: pointer;
 }
+
 .me:hover {
   color: var(--text-color-subtle);
 }
@@ -98,6 +113,7 @@
   margin: 5px;
   background-color: #444;
 }
+
 .reset:hover {
   background-color: #666;
   cursor: pointer;

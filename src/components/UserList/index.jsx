@@ -100,7 +100,7 @@ export const UserList = ({ me, users, scores }) => {
   };
 
   return (
-    <div className={`${styles.user_list} ${showScores && styles.show_scores}`}>
+    <div className={`${styles.user_list} ${users?.length > 5 && styles.two_columns} ${showScores && styles.show_scores}`}>
       {users?.map(user => (
         <User key={user.id} user={user} />
       ))}
