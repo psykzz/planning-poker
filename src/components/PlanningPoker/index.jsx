@@ -17,7 +17,7 @@ import * as styles from './planningpoker.module.css';
 
 // This is a special value that will trigger deleteing a score.
 const REMOVE_SCORE = "-";
-const POINTS = [REMOVE_SCORE, 1, 2, 3, 5, 8, 13];
+const POINTS = [REMOVE_SCORE, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 function parseISOString(s) {
   var b = s.split(/\D+/);
