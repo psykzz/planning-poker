@@ -1,5 +1,5 @@
 import React from 'react';
-import { resetScores, submitScore, deleteScore } from '../../api/scores';
+import { submitScore, deleteScore } from '../../api/scores';
 
 import * as styles from './scorecards.module.css';
 
@@ -9,9 +9,9 @@ export const ScoreCards = ({ options, session }) => {
     if (!user.id) return;
 
     if (value === '-') {
-      deleteScore(user.id, session);
+      deleteScore(session, user.id);
     } else {
-      submitScore(user.id, session, value);
+      submitScore(session, user.id, value);
     }
   };
 

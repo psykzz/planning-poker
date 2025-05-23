@@ -1,18 +1,22 @@
 import { supabase } from './client';
 
-export const submitScore = async (userId, session, score) => {
-  const { error } = await supabase
-    .from('scores')
-    .upsert([
-      { score, user_id: userId, session_name: session, updated_at: new Date(), revealed: false },
-    ]);
+export const submitScore = async (session, userId, score) => {
+  const { error } = await supabase.from('scores').upsert([
+    {
+      score,
+      user_id: userId,
+      session_name: session,
+      updated_at: new Date(),
+      revealed: false,
+    },
+  ]);
 
   if (error && !Array.isArray(error)) {
     throw new Error(JSON.stringify(error));
   }
 };
 
-export const deleteScore = async (userId, session) => {
+export const deleteScore = async (session, userId) => {
   const { error } = await supabase
     .from('scores')
     .delete()
@@ -22,7 +26,6 @@ export const deleteScore = async (userId, session) => {
     throw new Error(JSON.stringify(error));
   }
 };
-
 
 export const resetScores = async session => {
   const { error } = await supabase
@@ -45,7 +48,8 @@ export const updateAllScores = async (session, revealed) => {
     throw new Error(JSON.stringify(error));
   }
 };
-export const getScores = async session => {
+
+export const fetchScores = async session => {
   const { data: scores, error } = await supabase
     .from('scores')
     .select('user_id,score,revealed')
@@ -56,16 +60,4 @@ export const getScores = async session => {
   }
 
   return scores;
-};
-
-export const onNewScores = (session, callback) => {
-  const subscription = supabase
-    .from('scores')
-    .on('*', payload => {
-      console.log('Change received!', payload);
-      callback(payload);
-    })
-    .subscribe();
-
-  return subscription;
 };

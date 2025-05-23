@@ -10,6 +10,7 @@ module.exports = {
 
   flags: {
     FAST_DEV: true,
+    PARALLEL_SOURCING: true,
   },
 
   plugins: ['gatsby-plugin-netlify'],
