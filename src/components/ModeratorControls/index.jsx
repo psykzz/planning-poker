@@ -27,10 +27,24 @@ export const ModeratorControls = ({
     return window.confirm(msg);
   };
 
+  const removeSelected = () => {
+    const cardElements = document.querySelectorAll('[id^="score_val_"]');
+    cardElements.forEach(card => {
+      card.style.backgroundColor = '';
+      card.style.borderColor = '';
+    });
+  };
+
   const reset = React.useCallback(() => {
     toggleScores(false); // Only change visuals
+    removeSelected();
     resetScores(session);
   }, [session, toggleScores]);
+
+  const changePoints = React.useCallback(() => {
+    reset();
+    cycleSequence();
+  }, [cycleSequence, reset]);
 
   if (!isModerator) {
     return (
@@ -80,7 +94,7 @@ export const ModeratorControls = ({
         <div
           className={styles.sequence}
           onClick={() =>
-            confirm(`Use ${nextSequence} cards?`) && cycleSequence()
+            confirm(`Use ${nextSequence} cards?`) && changePoints()
           }
         >
           Use {nextSequence} Cards
