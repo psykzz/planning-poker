@@ -1,5 +1,15 @@
 import { supabase } from './client';
 
+// Score icons use negative numbers so math functions can skip them
+export const ICON_SCORE_MAP = {
+  '☕': -2,
+  '?': -1,
+};
+export const SCORE_ICON_MAP = {};
+for (const [k, v] of Object.entries(ICON_SCORE_MAP)) {
+  SCORE_ICON_MAP[v.toString()] = k;
+}
+
 export const submitScore = async (session, userId, score) => {
   const { error } = await supabase.from('scores').upsert([
     {

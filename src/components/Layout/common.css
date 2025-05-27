@@ -14,8 +14,10 @@
 
   /*Fixed colours*/
   --color-discord-blue: #7289da;
+  --color-warning-yellow: #dab936;
   --color-warning-red: #f44336;
 
+  /*Fixed styles*/
   --display-mobile-breakpoint: 768px;
 }
 
@@ -30,9 +32,6 @@
   /*Inverted colours*/
   --inverted-bg-color: #f7f5eb;
   --inverted-text-color: #333;
-
-  /*Fixed colours*/
-  --color-discord-blue: #7289da;
 }
 
 * {

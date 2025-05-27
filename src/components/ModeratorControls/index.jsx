@@ -3,7 +3,15 @@ import { toast } from 'react-toastify';
 import { resetScores } from '../../api/scores';
 import * as styles from './moderatorcontrols.module.css';
 
-export const ModeratorControls = ({ session, showScores, toggleScores }) => {
+export const ModeratorControls = ({
+  session,
+  showScores,
+  toggleScores,
+  confirmEnabled,
+  toggleConfirm,
+  nextSequence,
+  cycleSequence,
+}) => {
   const [isModerator, setIsModerator] = React.useState(false);
 
   React.useEffect(() => {
@@ -12,6 +20,13 @@ export const ModeratorControls = ({ session, showScores, toggleScores }) => {
     }
   }, [isModerator]);
 
+  const confirm = msg => {
+    if (!confirmEnabled) {
+      return true;
+    }
+    return window.confirm(msg);
+  };
+
   const reset = React.useCallback(() => {
     toggleScores(false); // Only change visuals
     resetScores(session);
@@ -19,31 +34,57 @@ export const ModeratorControls = ({ session, showScores, toggleScores }) => {
 
   if (!isModerator) {
     return (
-      <span
+      <button
         className={styles.moderator_notice}
         onClick={() => setIsModerator(true)}
       >
-        click to enable moderator controls
-      </span>
+        Show Moderator Controls
+      </button>
     );
   }
 
   return (
-    <div className={styles.actions}>
-      <div
-        className={styles.reveal}
-        onClick={() =>
-          window.confirm(`${showScores ? 'Hide' : 'Reveal'} all cards?`) &&
-          toggleScores(true)
-        }
+    <div className={styles.moderator_controls}>
+      <button
+        className={styles.moderator_notice}
+        onClick={() => setIsModerator(false)}
       >
-        {showScores ? 'Hide' : 'Reveal'}
+        Hide Moderator Controls
+      </button>
+      <div className={styles.actions}>
+        <div
+          className={styles.reveal}
+          onClick={() =>
+            confirm(`${showScores ? 'Hide' : 'Reveal'} all cards?`) &&
+            toggleScores(true)
+          }
+        >
+          {showScores ? 'Hide' : 'Reveal'}
+        </div>
+        <div
+          className={styles.reset}
+          onClick={() => confirm('Reset all cards?') && reset()}
+        >
+          Reset
+        </div>
       </div>
-      <div
-        className={styles.reset}
-        onClick={() => window.confirm('Reset all cards?') && reset()}
-      >
-        Reset
+      <div className={styles.options}>
+        <div
+          className={styles.confirm}
+          onClick={() =>
+            confirm('Disable your confirmation dialog?') && toggleConfirm()
+          }
+        >
+          {confirmEnabled ? 'Disable' : 'Enable'} Confirm
+        </div>
+        <div
+          className={styles.sequence}
+          onClick={() =>
+            confirm(`Use ${nextSequence} cards?`) && cycleSequence()
+          }
+        >
+          Use {nextSequence} Cards
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { submitScore, deleteScore } from '../../api/scores';
+import { submitScore, deleteScore, ICON_SCORE_MAP } from '../../api/scores';
 
 import * as styles from './scorecards.module.css';
 
@@ -11,7 +11,7 @@ export const ScoreCards = ({ options, session }) => {
     if (value === '-') {
       deleteScore(session, user.id);
     } else {
-      submitScore(session, user.id, value);
+      submitScore(session, user.id, ICON_SCORE_MAP[value] || value);
     }
   };
 
@@ -20,7 +20,7 @@ export const ScoreCards = ({ options, session }) => {
       <div className={styles.options}>
         {options.map(opt => (
           <div
-            key={opt}
+            key={ICON_SCORE_MAP[opt] || opt}
             className={styles.card}
             onClick={() => onSelectCard(opt)}
           >
