@@ -1,5 +1,6 @@
 import React from 'react';
 import * as styles from './userlist.module.css';
+import { SCORE_ICON_MAP } from '../../api/scores';
 
 const standardDeviation = array => {
   const n = array.length;
@@ -13,21 +14,34 @@ const standardDeviation = array => {
 const average = arr => arr.reduce((p, c) => p + c, 0) / arr.length;
 
 export const UserList = ({ me, users, scores }) => {
-  const [vibrating, setVibrating] = React.useState(false);
+  // const [vibrating, setVibrating] = React.useState(false);
+  // All math functions skip negative scores (that icons use)
   let lowest = React.useMemo(
-    () => Math.min(...scores.map(score => score.score)),
+    () =>
+      Math.min(
+        ...scores.filter(score => score.score >= 0).map(score => score.score)
+      ),
     [scores]
   );
   let highest = React.useMemo(
-    () => Math.max(...scores.map(score => score.score)),
+    () =>
+      Math.max(
+        ...scores.filter(score => score.score >= 0).map(score => score.score)
+      ),
     [scores]
   );
   let stddev = React.useMemo(
-    () => standardDeviation(scores.map(score => score.score)),
+    () =>
+      standardDeviation(
+        scores.filter(score => score.score >= 0).map(score => score.score)
+      ),
     [scores]
   );
   let avg = React.useMemo(
-    () => average(scores.map(score => score.score)),
+    () =>
+      average(
+        scores.filter(score => score.score >= 0).map(score => score.score)
+      ),
     [scores]
   );
   const scoreByUser = {};
@@ -56,11 +70,16 @@ export const UserList = ({ me, users, scores }) => {
   try {
     if (showScores) {
       // Try to sort by score as well.
-      users?.sort((a,b) => (scoreByUser[b.id]?.score ?? 0) - (scoreByUser[a.id]?.score ?? 0));
+      users?.sort(
+        (a, b) =>
+          (scoreByUser[b.id]?.score ?? 0) - (scoreByUser[a.id]?.score ?? 0)
+      );
     }
-  } catch (e) { console.error(e); }
-  console.log({users})
-  
+  } catch (e) {
+    console.error(e);
+  }
+  console.log({ users });
+
   const resetName = () => {
     if (typeof window === 'undefined') {
       return;
@@ -76,7 +95,11 @@ export const UserList = ({ me, users, scores }) => {
     if (!score.revealed && !isMe) {
       return <div className={styles.score}>?</div>;
     }
-    return <div className={styles.score}>{score.score}</div>;
+    return (
+      <div className={styles.score}>
+        {SCORE_ICON_MAP[score.score.toString()] || score.score}
+      </div>
+    );
   };
 
   const User = ({ user }) => {
@@ -100,7 +123,11 @@ export const UserList = ({ me, users, scores }) => {
   };
 
   return (
-    <div className={`${styles.user_list} ${users?.length > 5 && styles.two_columns} ${showScores && styles.show_scores}`}>
+    <div
+      className={`${styles.user_list} ${
+        users?.length > 5 && styles.two_columns
+      } ${showScores && styles.show_scores}`}
+    >
       {users?.map(user => (
         <User key={user.id} user={user} />
       ))}

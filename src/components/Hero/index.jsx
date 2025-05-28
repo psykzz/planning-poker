@@ -44,7 +44,7 @@ export const Hero = () => {
     if (typeof window === 'undefined') {
       return;
     }
-    window.location.href += `#${nanoid(7)}`;
+    window.location.hash = nanoid(7);
   };
 
   return (

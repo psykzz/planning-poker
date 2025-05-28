@@ -1,6 +1,6 @@
 import { supabase } from './client';
 
-export const createUser = async (username, session) => {
+export const createUser = async (session, username) => {
   const { data: newUser, error } = await supabase
     .from('users')
     .insert([{ name: username, session_name: session }]);
@@ -12,7 +12,7 @@ export const createUser = async (username, session) => {
   return newUser[0];
 };
 
-export const updateUserPresence = async (userId, session, last_presence) => {
+export const updateUserPresence = async (session, userId, last_presence) => {
   if (!userId) return;
   const { error } = await supabase
     .from('users')
@@ -24,7 +24,7 @@ export const updateUserPresence = async (userId, session, last_presence) => {
   }
 };
 
-export const getAllUsers = async session => {
+export const fetchAllUsers = async session => {
   let { data: users, error } = await supabase
     .from('users')
     .select('*')
@@ -37,7 +37,7 @@ export const getAllUsers = async session => {
   return users;
 };
 
-export const getUser = async userId => {
+export const fetchUser = async userId => {
   if (!userId) return;
 
   let { data: user, error } = await supabase

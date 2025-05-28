@@ -2,12 +2,20 @@ import React from 'react';
 import { Helmet } from 'react-helmet';
 import { toast } from 'react-toastify';
 import { useCopyToClipboard } from 'react-use';
-import { removeSubscription } from '../../api/client';
-import { getScores, onNewScores, updateAllScores } from '../../api/scores';
+import { addSubscription, removeSubscription } from '../../api/client';
+import {
+  fetchOption,
+  submitOption,
+  OPT_CONFIRM_DEFAULT,
+  OPT_CONFIRM_KEY,
+  OPT_POINT_SEQ_DEFAULT,
+  OPT_POINT_KEY,
+} from '../../api/options';
+import { fetchScores, updateAllScores } from '../../api/scores';
 import {
   createUser,
-  getAllUsers,
-  getUser,
+  fetchAllUsers,
+  fetchUser,
   updateUserPresence,
 } from '../../api/users';
 import { ModeratorControls } from '../ModeratorControls';
@@ -16,8 +24,13 @@ import { UserList } from '../UserList';
 import * as styles from './planningpoker.module.css';
 
 // This is a special value that will trigger deleteing a score.
-const REMOVE_SCORE = "-";
-const POINTS = [REMOVE_SCORE, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const REMOVE_SCORE = '-';
+const POINT_SEQUENCES = {
+  fibonacci: [REMOVE_SCORE, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89],
+  scrum: [REMOVE_SCORE, '☕', '?', 0, 1, 2, 3, 5, 8, 13, 20, 40, 100],
+  standard: [REMOVE_SCORE, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+};
+const POINT_SEQUENCES_SORTED = Object.keys(POINT_SEQUENCES).sort();
 
 function parseISOString(s) {
   var b = s.split(/\D+/);
@@ -32,7 +45,7 @@ const CopySession = session => {
       copyToClipboard(
         `${window.location.origin}${window.location.pathname}#${session.sessionId}`
       ),
-    [session]
+    [session, copyToClipboard]
   );
   React.useEffect(() => {
     state.value && toast.success(`Copied ${state.value}!`);
@@ -48,11 +61,20 @@ export const PlanningPoker = ({ session, user: localUser }) => {
   const [user, setUser] = React.useState();
   const [users, setUsers] = React.useState([]);
   const [scores, setScores] = React.useState([]);
+  const [confirmEnabled, setConfirmEnabled] = React.useState(
+    OPT_CONFIRM_DEFAULT === 'true'
+  );
+  const [sequence, setSequence] = React.useState(OPT_POINT_SEQ_DEFAULT);
 
   const showScores = scores.length && scores.every(score => score.revealed);
+  const nextSequence =
+    POINT_SEQUENCES_SORTED[
+      (POINT_SEQUENCES_SORTED.indexOf(sequence) + 1) %
+        POINT_SEQUENCES_SORTED.length
+    ];
 
   const updateUsers = async session => {
-    const users = await getAllUsers(session);
+    const users = await fetchAllUsers(session);
     const now = new Date();
     const afkSeconds = 30; // 3 * the presence timer
     // filter users afk great than the limit
@@ -64,23 +86,23 @@ export const PlanningPoker = ({ session, user: localUser }) => {
     setUsers(activeUsers);
   };
 
-  const updatePresence = async (session, user) => {
-    await updateUserPresence(user.id, session, new Date().toISOString());
+  const updatePresence = React.useCallback(async (session, user) => {
+    await updateUserPresence(session, user.id, new Date().toISOString());
     await updateUsers(session);
-  };
+  }, []);
 
   const getOrCreateUser = async (session, user) => {
-    const existingUser = await getUser(user.id);
+    const existingUser = await fetchUser(user.id);
     if (existingUser) {
       setUser(existingUser);
       return;
     }
-    const newUser = await createUser(user.name, session);
+    const newUser = await createUser(session, user.name);
     setUser(newUser);
   };
 
   const updateScores = async session => {
-    const scores = await getScores(session);
+    const scores = await fetchScores(session);
     setScores(scores);
   };
 
@@ -102,8 +124,18 @@ export const PlanningPoker = ({ session, user: localUser }) => {
     setScores(scores => [...scores.filter(score => score.user_id !== oldUser)]);
   };
 
+  const updateSessionOptions = async session => {
+    const pointSequence = await fetchOption(
+      session,
+      OPT_POINT_KEY,
+      OPT_POINT_SEQ_DEFAULT
+    );
+    setSequence(pointSequence);
+    // Confirm option is per-user, so not set for all users in session
+  };
+
   React.useEffect(() => {
-    const subcriptionId = onNewScores(session, payload => {
+    const subcriptionId = addSubscription(session, 'scores', payload => {
       if (payload.eventType === 'DELETE') {
         removeScore(payload);
       } else {
@@ -111,6 +143,24 @@ export const PlanningPoker = ({ session, user: localUser }) => {
       }
     });
     updateScores(session);
+    return () => removeSubscription(subcriptionId);
+  }, [session]);
+
+  React.useEffect(() => {
+    const subcriptionId = addSubscription(session, 'options', payload => {
+      switch (payload.new?.key) {
+        case OPT_CONFIRM_KEY:
+          setConfirmEnabled(payload.new?.value === 'true');
+          break;
+        case OPT_POINT_KEY:
+          setSequence(payload.new?.value || OPT_POINT_SEQ_DEFAULT);
+          break;
+        default:
+          console.warn('Unknown option change', payload);
+          break;
+      }
+    });
+    updateSessionOptions(session);
     return () => removeSubscription(subcriptionId);
   }, [session]);
 
@@ -134,13 +184,13 @@ export const PlanningPoker = ({ session, user: localUser }) => {
     // trigger one now
     updatePresence(session, user);
     return () => clearInterval(interval);
-  }, [user, session]);
+  }, [user, session, updatePresence]);
 
   React.useEffect(() => {
     const onFocus = () => updatePresence(session, user);
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, [user, session]);
+  }, [user, session, updatePresence]);
 
   const toggleScores = React.useCallback(
     (shouldUpdateAllScores = true) => {
@@ -152,6 +202,18 @@ export const PlanningPoker = ({ session, user: localUser }) => {
     [session, showScores]
   );
 
+  const toggleConfirm = React.useCallback(() => {
+    console.log('Toggling confirm', !confirmEnabled);
+    // Confirm option is per-user only, so set locally but not in the session database
+    setConfirmEnabled(!confirmEnabled);
+  }, [confirmEnabled]);
+
+  const cycleSequence = React.useCallback(() => {
+    console.log('Cycling sequence', nextSequence);
+    submitOption(session, OPT_POINT_KEY, nextSequence);
+    setSequence(nextSequence);
+  }, [session, nextSequence]);
+
   return (
     <>
       <Helmet>
@@ -159,8 +221,18 @@ export const PlanningPoker = ({ session, user: localUser }) => {
       </Helmet>
       <CopySession sessionId={session} />
       <UserList me={user} users={users} scores={scores} />
-      <ScoreCards session={session} options={POINTS} />
-      <ModeratorControls {...{ session, showScores, toggleScores }} />
+      <ScoreCards session={session} options={POINT_SEQUENCES[sequence]} />
+      <ModeratorControls
+        {...{
+          session,
+          showScores,
+          toggleScores,
+          confirmEnabled,
+          toggleConfirm,
+          nextSequence,
+          cycleSequence,
+        }}
+      />
     </>
   );
 };
