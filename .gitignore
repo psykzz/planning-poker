@@ -61,6 +61,10 @@ out/
 # Vite build output
 dist/
 
+# Gatsby cache files (legacy)
+.cache/
+public/
+
 # Mac files
 .DS_Store
 
