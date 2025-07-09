@@ -1,0 +1,9570 @@
+/******/ (() => { // webpackBootstrap
+/******/ 	var __webpack_modules__ = ({
+
+/***/ 9376:
+/***/ ((module) => {
+
+"use strict";
+
+
+/**
+ * Masks a buffer using the given mask.
+ *
+ * @param {Buffer} source The buffer to mask
+ * @param {Buffer} mask The mask to use
+ * @param {Buffer} output The buffer where to store the result
+ * @param {Number} offset The offset at which to start writing
+ * @param {Number} length The number of bytes to mask.
+ * @public
+ */
+const mask = (source, mask, output, offset, length) => {
+  for (var i = 0; i < length; i++) {
+    output[offset + i] = source[i] ^ mask[i & 3];
+  }
+};
+
+/**
+ * Unmasks a buffer using the given mask.
+ *
+ * @param {Buffer} buffer The buffer to unmask
+ * @param {Buffer} mask The mask to use
+ * @public
+ */
+const unmask = (buffer, mask) => {
+  // Required until https://github.com/nodejs/node/issues/9006 is resolved.
+  const length = buffer.length;
+  for (var i = 0; i < length; i++) {
+    buffer[i] ^= mask[i & 3];
+  }
+};
+
+module.exports = { mask, unmask };
+
+
+/***/ }),
+
+/***/ 1891:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+try {
+  module.exports = __webpack_require__(9516)(__dirname);
+} catch (e) {
+  module.exports = __webpack_require__(9376);
+}
+
+
+/***/ }),
+
+/***/ 4501:
+/***/ ((module) => {
+
+module.exports      = isTypedArray
+isTypedArray.strict = isStrictTypedArray
+isTypedArray.loose  = isLooseTypedArray
+
+var toString = Object.prototype.toString
+var names = {
+    '[object Int8Array]': true
+  , '[object Int16Array]': true
+  , '[object Int32Array]': true
+  , '[object Uint8Array]': true
+  , '[object Uint8ClampedArray]': true
+  , '[object Uint16Array]': true
+  , '[object Uint32Array]': true
+  , '[object Float32Array]': true
+  , '[object Float64Array]': true
+}
+
+function isTypedArray(arr) {
+  return (
+       isStrictTypedArray(arr)
+    || isLooseTypedArray(arr)
+  )
+}
+
+function isStrictTypedArray(arr) {
+  return (
+       arr instanceof Int8Array
+    || arr instanceof Int16Array
+    || arr instanceof Int32Array
+    || arr instanceof Uint8Array
+    || arr instanceof Uint8ClampedArray
+    || arr instanceof Uint16Array
+    || arr instanceof Uint32Array
+    || arr instanceof Float32Array
+    || arr instanceof Float64Array
+  )
+}
+
+function isLooseTypedArray(arr) {
+  return names[toString.call(arr)]
+}
+
+
+/***/ }),
+
+/***/ 9516:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+var fs = __webpack_require__(7147)
+var path = __webpack_require__(1017)
+var os = __webpack_require__(2037)
+
+// Workaround to fix webpack's build warnings: 'the request of a dependency is an expression'
+var runtimeRequire =  true ? require : 0 // eslint-disable-line
+
+var vars = (process.config && process.config.variables) || {}
+var prebuildsOnly = !!({}).PREBUILDS_ONLY
+var abi = process.versions.modules // TODO: support old node where this is undef
+var runtime = isElectron() ? 'electron' : (isNwjs() ? 'node-webkit' : 'node')
+
+var arch = ({}).npm_config_arch || os.arch()
+var platform = ({}).npm_config_platform || os.platform()
+var libc = ({}).LIBC || (isAlpine(platform) ? 'musl' : 'glibc')
+var armv = ({}).ARM_VERSION || (arch === 'arm64' ? '8' : vars.arm_version) || ''
+var uv = (process.versions.uv || '').split('.')[0]
+
+module.exports = load
+
+function load (dir) {
+  return runtimeRequire(load.path(dir))
+}
+
+load.path = function (dir) {
+  dir = path.resolve(dir || '.')
+
+  try {
+    var name = runtimeRequire(path.join(dir, 'package.json')).name.toUpperCase().replace(/-/g, '_')
+    if (({})[name + '_PREBUILD']) dir = ({})[name + '_PREBUILD']
+  } catch (err) {}
+
+  if (!prebuildsOnly) {
+    var release = getFirst(path.join(dir, 'build/Release'), matchBuild)
+    if (release) return release
+
+    var debug = getFirst(path.join(dir, 'build/Debug'), matchBuild)
+    if (debug) return debug
+  }
+
+  var prebuild = resolve(dir)
+  if (prebuild) return prebuild
+
+  var nearby = resolve(path.dirname(process.execPath))
+  if (nearby) return nearby
+
+  var target = [
+    'platform=' + platform,
+    'arch=' + arch,
+    'runtime=' + runtime,
+    'abi=' + abi,
+    'uv=' + uv,
+    armv ? 'armv=' + armv : '',
+    'libc=' + libc,
+    'node=' + process.versions.node,
+    process.versions.electron ? 'electron=' + process.versions.electron : '',
+     true ? 'webpack=true' : 0 // eslint-disable-line
+  ].filter(Boolean).join(' ')
+
+  throw new Error('No native build was found for ' + target + '\n    loaded from: ' + dir + '\n')
+
+  function resolve (dir) {
+    // Find matching "prebuilds/<platform>-<arch>" directory
+    var tuples = readdirSync(path.join(dir, 'prebuilds')).map(parseTuple)
+    var tuple = tuples.filter(matchTuple(platform, arch)).sort(compareTuples)[0]
+    if (!tuple) return
+
+    // Find most specific flavor first
+    var prebuilds = path.join(dir, 'prebuilds', tuple.name)
+    var parsed = readdirSync(prebuilds).map(parseTags)
+    var candidates = parsed.filter(matchTags(runtime, abi))
+    var winner = candidates.sort(compareTags(runtime))[0]
+    if (winner) return path.join(prebuilds, winner.file)
+  }
+}
+
+function readdirSync (dir) {
+  try {
+    return fs.readdirSync(dir)
+  } catch (err) {
+    return []
+  }
+}
+
+function getFirst (dir, filter) {
+  var files = readdirSync(dir).filter(filter)
+  return files[0] && path.join(dir, files[0])
+}
+
+function matchBuild (name) {
+  return /\.node$/.test(name)
+}
+
+function parseTuple (name) {
+  // Example: darwin-x64+arm64
+  var arr = name.split('-')
+  if (arr.length !== 2) return
+
+  var platform = arr[0]
+  var architectures = arr[1].split('+')
+
+  if (!platform) return
+  if (!architectures.length) return
+  if (!architectures.every(Boolean)) return
+
+  return { name, platform, architectures }
+}
+
+function matchTuple (platform, arch) {
+  return function (tuple) {
+    if (tuple == null) return false
+    if (tuple.platform !== platform) return false
+    return tuple.architectures.includes(arch)
+  }
+}
+
+function compareTuples (a, b) {
+  // Prefer single-arch prebuilds over multi-arch
+  return a.architectures.length - b.architectures.length
+}
+
+function parseTags (file) {
+  var arr = file.split('.')
+  var extension = arr.pop()
+  var tags = { file: file, specificity: 0 }
+
+  if (extension !== 'node') return
+
+  for (var i = 0; i < arr.length; i++) {
+    var tag = arr[i]
+
+    if (tag === 'node' || tag === 'electron' || tag === 'node-webkit') {
+      tags.runtime = tag
+    } else if (tag === 'napi') {
+      tags.napi = true
+    } else if (tag.slice(0, 3) === 'abi') {
+      tags.abi = tag.slice(3)
+    } else if (tag.slice(0, 2) === 'uv') {
+      tags.uv = tag.slice(2)
+    } else if (tag.slice(0, 4) === 'armv') {
+      tags.armv = tag.slice(4)
+    } else if (tag === 'glibc' || tag === 'musl') {
+      tags.libc = tag
+    } else {
+      continue
+    }
+
+    tags.specificity++
+  }
+
+  return tags
+}
+
+function matchTags (runtime, abi) {
+  return function (tags) {
+    if (tags == null) return false
+    if (tags.runtime !== runtime && !runtimeAgnostic(tags)) return false
+    if (tags.abi !== abi && !tags.napi) return false
+    if (tags.uv && tags.uv !== uv) return false
+    if (tags.armv && tags.armv !== armv) return false
+    if (tags.libc && tags.libc !== libc) return false
+
+    return true
+  }
+}
+
+function runtimeAgnostic (tags) {
+  return tags.runtime === 'node' && tags.napi
+}
+
+function compareTags (runtime) {
+  // Precedence: non-agnostic runtime, abi over napi, then by specificity.
+  return function (a, b) {
+    if (a.runtime !== b.runtime) {
+      return a.runtime === runtime ? -1 : 1
+    } else if (a.abi !== b.abi) {
+      return a.abi ? -1 : 1
+    } else if (a.specificity !== b.specificity) {
+      return a.specificity > b.specificity ? -1 : 1
+    } else {
+      return 0
+    }
+  }
+}
+
+function isNwjs () {
+  return !!(process.versions && process.versions.nw)
+}
+
+function isElectron () {
+  if (process.versions && process.versions.electron) return true
+  if (({}).ELECTRON_RUN_AS_NODE) return true
+  return typeof window !== 'undefined' && window.process && window.process.type === 'renderer'
+}
+
+function isAlpine (platform) {
+  return platform === 'linux' && fs.existsSync('/etc/alpine-release')
+}
+
+// Exposed for unit tests
+// TODO: move to lib
+load.parseTags = parseTags
+load.matchTags = matchTags
+load.compareTags = compareTags
+load.parseTuple = parseTuple
+load.matchTuple = matchTuple
+load.compareTuples = compareTuples
+
+
+/***/ }),
+
+/***/ 5054:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/**
+ * Convert a typed array to a Buffer without a copy
+ *
+ * Author:   Feross Aboukhadijeh <https://feross.org>
+ * License:  MIT
+ *
+ * `npm install typedarray-to-buffer`
+ */
+
+var isTypedArray = (__webpack_require__(4501).strict)
+
+module.exports = function typedarrayToBuffer (arr) {
+  if (isTypedArray(arr)) {
+    // To avoid a copy, use the typed array's underlying ArrayBuffer to back new Buffer
+    var buf = Buffer.from(arr.buffer)
+    if (arr.byteLength !== arr.buffer.byteLength) {
+      // Respect the "view", i.e. byteOffset and byteLength, without doing a copy
+      buf = buf.slice(arr.byteOffset, arr.byteOffset + arr.byteLength)
+    }
+    return buf
+  } else {
+    // Pass through all other types to `Buffer.from`
+    return Buffer.from(arr)
+  }
+}
+
+
+/***/ }),
+
+/***/ 137:
+/***/ ((module) => {
+
+"use strict";
+
+
+/**
+ * Checks if a given buffer contains only correct UTF-8.
+ * Ported from https://www.cl.cam.ac.uk/%7Emgk25/ucs/utf8_check.c by
+ * Markus Kuhn.
+ *
+ * @param {Buffer} buf The buffer to check
+ * @return {Boolean} `true` if `buf` contains only correct UTF-8, else `false`
+ * @public
+ */
+function isValidUTF8(buf) {
+  const len = buf.length;
+  let i = 0;
+
+  while (i < len) {
+    if ((buf[i] & 0x80) === 0x00) {  // 0xxxxxxx
+      i++;
+    } else if ((buf[i] & 0xe0) === 0xc0) {  // 110xxxxx 10xxxxxx
+      if (
+        i + 1 === len ||
+        (buf[i + 1] & 0xc0) !== 0x80 ||
+        (buf[i] & 0xfe) === 0xc0  // overlong
+      ) {
+        return false;
+      }
+
+      i += 2;
+    } else if ((buf[i] & 0xf0) === 0xe0) {  // 1110xxxx 10xxxxxx 10xxxxxx
+      if (
+        i + 2 >= len ||
+        (buf[i + 1] & 0xc0) !== 0x80 ||
+        (buf[i + 2] & 0xc0) !== 0x80 ||
+        buf[i] === 0xe0 && (buf[i + 1] & 0xe0) === 0x80 ||  // overlong
+        buf[i] === 0xed && (buf[i + 1] & 0xe0) === 0xa0  // surrogate (U+D800 - U+DFFF)
+      ) {
+        return false;
+      }
+
+      i += 3;
+    } else if ((buf[i] & 0xf8) === 0xf0) {  // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+      if (
+        i + 3 >= len ||
+        (buf[i + 1] & 0xc0) !== 0x80 ||
+        (buf[i + 2] & 0xc0) !== 0x80 ||
+        (buf[i + 3] & 0xc0) !== 0x80 ||
+        buf[i] === 0xf0 && (buf[i + 1] & 0xf0) === 0x80 ||  // overlong
+        buf[i] === 0xf4 && buf[i + 1] > 0x8f || buf[i] > 0xf4  // > U+10FFFF
+      ) {
+        return false;
+      }
+
+      i += 4;
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+module.exports = isValidUTF8;
+
+
+/***/ }),
+
+/***/ 311:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+try {
+  module.exports = __webpack_require__(9516)(__dirname);
+} catch (e) {
+  module.exports = __webpack_require__(137);
+}
+
+
+/***/ }),
+
+/***/ 5159:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+module.exports = __webpack_require__(8287);
+
+/***/ }),
+
+/***/ 1197:
+/***/ ((module) => {
+
+/************************************************************************
+ *  Copyright 2010-2015 Brian McKelvey.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ***********************************************************************/
+
+var Deprecation = {
+    disableWarnings: false,
+
+    deprecationWarningMap: {
+
+    },
+
+    warn: function(deprecationName) {
+        if (!this.disableWarnings && this.deprecationWarningMap[deprecationName]) {
+            console.warn('DEPRECATION WARNING: ' + this.deprecationWarningMap[deprecationName]);
+            this.deprecationWarningMap[deprecationName] = false;
+        }
+    }
+};
+
+module.exports = Deprecation;
+
+
+/***/ }),
+
+/***/ 4864:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/************************************************************************
+ *  Copyright 2010-2015 Brian McKelvey.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ***********************************************************************/
+
+var WebSocketClient = __webpack_require__(6749);
+var toBuffer = __webpack_require__(5054);
+var yaeti = __webpack_require__(8653);
+
+
+const CONNECTING = 0;
+const OPEN = 1;
+const CLOSING = 2;
+const CLOSED = 3;
+
+
+module.exports = W3CWebSocket;
+
+
+function W3CWebSocket(url, protocols, origin, headers, requestOptions, clientConfig) {
+    // Make this an EventTarget.
+    yaeti.EventTarget.call(this);
+
+    // Sanitize clientConfig.
+    clientConfig = clientConfig || {};
+    clientConfig.assembleFragments = true;  // Required in the W3C API.
+
+    var self = this;
+
+    this._url = url;
+    this._readyState = CONNECTING;
+    this._protocol = undefined;
+    this._extensions = '';
+    this._bufferedAmount = 0;  // Hack, always 0.
+    this._binaryType = 'arraybuffer';  // TODO: Should be 'blob' by default, but Node has no Blob.
+
+    // The WebSocketConnection instance.
+    this._connection = undefined;
+
+    // WebSocketClient instance.
+    this._client = new WebSocketClient(clientConfig);
+
+    this._client.on('connect', function(connection) {
+        onConnect.call(self, connection);
+    });
+
+    this._client.on('connectFailed', function() {
+        onConnectFailed.call(self);
+    });
+
+    this._client.connect(url, protocols, origin, headers, requestOptions);
+}
+
+
+// Expose W3C read only attributes.
+Object.defineProperties(W3CWebSocket.prototype, {
+    url:            { get: function() { return this._url;            } },
+    readyState:     { get: function() { return this._readyState;     } },
+    protocol:       { get: function() { return this._protocol;       } },
+    extensions:     { get: function() { return this._extensions;     } },
+    bufferedAmount: { get: function() { return this._bufferedAmount; } }
+});
+
+
+// Expose W3C write/read attributes.
+Object.defineProperties(W3CWebSocket.prototype, {
+    binaryType: {
+        get: function() {
+            return this._binaryType;
+        },
+        set: function(type) {
+            // TODO: Just 'arraybuffer' supported.
+            if (type !== 'arraybuffer') {
+                throw new SyntaxError('just "arraybuffer" type allowed for "binaryType" attribute');
+            }
+            this._binaryType = type;
+        }
+    }
+});
+
+
+// Expose W3C readyState constants into the WebSocket instance as W3C states.
+[['CONNECTING',CONNECTING], ['OPEN',OPEN], ['CLOSING',CLOSING], ['CLOSED',CLOSED]].forEach(function(property) {
+    Object.defineProperty(W3CWebSocket.prototype, property[0], {
+        get: function() { return property[1]; }
+    });
+});
+
+// Also expose W3C readyState constants into the WebSocket class (not defined by the W3C,
+// but there are so many libs relying on them).
+[['CONNECTING',CONNECTING], ['OPEN',OPEN], ['CLOSING',CLOSING], ['CLOSED',CLOSED]].forEach(function(property) {
+    Object.defineProperty(W3CWebSocket, property[0], {
+        get: function() { return property[1]; }
+    });
+});
+
+
+W3CWebSocket.prototype.send = function(data) {
+    if (this._readyState !== OPEN) {
+        throw new Error('cannot call send() while not connected');
+    }
+
+    // Text.
+    if (typeof data === 'string' || data instanceof String) {
+        this._connection.sendUTF(data);
+    }
+    // Binary.
+    else {
+        // Node Buffer.
+        if (data instanceof Buffer) {
+            this._connection.sendBytes(data);
+        }
+        // If ArrayBuffer or ArrayBufferView convert it to Node Buffer.
+        else if (data.byteLength || data.byteLength === 0) {
+            data = toBuffer(data);
+            this._connection.sendBytes(data);
+        }
+        else {
+            throw new Error('unknown binary data:', data);
+        }
+    }
+};
+
+
+W3CWebSocket.prototype.close = function(code, reason) {
+    switch(this._readyState) {
+        case CONNECTING:
+            // NOTE: We don't have the WebSocketConnection instance yet so no
+            // way to close the TCP connection.
+            // Artificially invoke the onConnectFailed event.
+            onConnectFailed.call(this);
+            // And close if it connects after a while.
+            this._client.on('connect', function(connection) {
+                if (code) {
+                    connection.close(code, reason);
+                } else {
+                    connection.close();
+                }
+            });
+            break;
+        case OPEN:
+            this._readyState = CLOSING;
+            if (code) {
+                this._connection.close(code, reason);
+            } else {
+                this._connection.close();
+            }
+            break;
+        case CLOSING:
+        case CLOSED:
+            break;
+    }
+};
+
+
+/**
+ * Private API.
+ */
+
+
+function createCloseEvent(code, reason) {
+    var event = new yaeti.Event('close');
+
+    event.code = code;
+    event.reason = reason;
+    event.wasClean = (typeof code === 'undefined' || code === 1000);
+
+    return event;
+}
+
+
+function createMessageEvent(data) {
+    var event = new yaeti.Event('message');
+
+    event.data = data;
+
+    return event;
+}
+
+
+function onConnect(connection) {
+    var self = this;
+
+    this._readyState = OPEN;
+    this._connection = connection;
+    this._protocol = connection.protocol;
+    this._extensions = connection.extensions;
+
+    this._connection.on('close', function(code, reason) {
+        onClose.call(self, code, reason);
+    });
+
+    this._connection.on('message', function(msg) {
+        onMessage.call(self, msg);
+    });
+
+    this.dispatchEvent(new yaeti.Event('open'));
+}
+
+
+function onConnectFailed() {
+    destroy.call(this);
+    this._readyState = CLOSED;
+
+    try {
+        this.dispatchEvent(new yaeti.Event('error'));
+    } finally {
+        this.dispatchEvent(createCloseEvent(1006, 'connection failed'));
+    }
+}
+
+
+function onClose(code, reason) {
+    destroy.call(this);
+    this._readyState = CLOSED;
+
+    this.dispatchEvent(createCloseEvent(code, reason || ''));
+}
+
+
+function onMessage(message) {
+    if (message.utf8Data) {
+        this.dispatchEvent(createMessageEvent(message.utf8Data));
+    }
+    else if (message.binaryData) {
+        // Must convert from Node Buffer to ArrayBuffer.
+        // TODO: or to a Blob (which does not exist in Node!).
+        if (this.binaryType === 'arraybuffer') {
+            var buffer = message.binaryData;
+            var arraybuffer = new ArrayBuffer(buffer.length);
+            var view = new Uint8Array(arraybuffer);
+            for (var i=0, len=buffer.length; i<len; ++i) {
+                view[i] = buffer[i];
+            }
+            this.dispatchEvent(createMessageEvent(arraybuffer));
+        }
+    }
+}
+
+
+function destroy() {
+    this._client.removeAllListeners();
+    if (this._connection) {
+        this._connection.removeAllListeners();
+    }
+}
+
+
+/***/ }),
+
+/***/ 6749:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/************************************************************************
+ *  Copyright 2010-2015 Brian McKelvey.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ***********************************************************************/
+
+var utils = __webpack_require__(4636);
+var extend = utils.extend;
+var util = __webpack_require__(3837);
+var EventEmitter = (__webpack_require__(2361).EventEmitter);
+var http = __webpack_require__(3685);
+var https = __webpack_require__(5687);
+var url = __webpack_require__(7310);
+var crypto = __webpack_require__(6113);
+var WebSocketConnection = __webpack_require__(1836);
+var bufferAllocUnsafe = utils.bufferAllocUnsafe;
+
+var protocolSeparators = [
+    '(', ')', '<', '>', '@',
+    ',', ';', ':', '\\', '\"',
+    '/', '[', ']', '?', '=',
+    '{', '}', ' ', String.fromCharCode(9)
+];
+
+var excludedTlsOptions = ['hostname','port','method','path','headers'];
+
+function WebSocketClient(config) {
+    // Superclass Constructor
+    EventEmitter.call(this);
+
+    // TODO: Implement extensions
+
+    this.config = {
+        // 1MiB max frame size.
+        maxReceivedFrameSize: 0x100000,
+
+        // 8MiB max message size, only applicable if
+        // assembleFragments is true
+        maxReceivedMessageSize: 0x800000,
+
+        // Outgoing messages larger than fragmentationThreshold will be
+        // split into multiple fragments.
+        fragmentOutgoingMessages: true,
+
+        // Outgoing frames are fragmented if they exceed this threshold.
+        // Default is 16KiB
+        fragmentationThreshold: 0x4000,
+
+        // Which version of the protocol to use for this session.  This
+        // option will be removed once the protocol is finalized by the IETF
+        // It is only available to ease the transition through the
+        // intermediate draft protocol versions.
+        // At present, it only affects the name of the Origin header.
+        webSocketVersion: 13,
+
+        // If true, fragmented messages will be automatically assembled
+        // and the full message will be emitted via a 'message' event.
+        // If false, each frame will be emitted via a 'frame' event and
+        // the application will be responsible for aggregating multiple
+        // fragmented frames.  Single-frame messages will emit a 'message'
+        // event in addition to the 'frame' event.
+        // Most users will want to leave this set to 'true'
+        assembleFragments: true,
+
+        // The Nagle Algorithm makes more efficient use of network resources
+        // by introducing a small delay before sending small packets so that
+        // multiple messages can be batched together before going onto the
+        // wire.  This however comes at the cost of latency, so the default
+        // is to disable it.  If you don't need low latency and are streaming
+        // lots of small messages, you can change this to 'false'
+        disableNagleAlgorithm: true,
+
+        // The number of milliseconds to wait after sending a close frame
+        // for an acknowledgement to come back before giving up and just
+        // closing the socket.
+        closeTimeout: 5000,
+
+        // Options to pass to https.connect if connecting via TLS
+        tlsOptions: {}
+    };
+
+    if (config) {
+        var tlsOptions;
+        if (config.tlsOptions) {
+          tlsOptions = config.tlsOptions;
+          delete config.tlsOptions;
+        }
+        else {
+          tlsOptions = {};
+        }
+        extend(this.config, config);
+        extend(this.config.tlsOptions, tlsOptions);
+    }
+
+    this._req = null;
+    
+    switch (this.config.webSocketVersion) {
+        case 8:
+        case 13:
+            break;
+        default:
+            throw new Error('Requested webSocketVersion is not supported. Allowed values are 8 and 13.');
+    }
+}
+
+util.inherits(WebSocketClient, EventEmitter);
+
+WebSocketClient.prototype.connect = function(requestUrl, protocols, origin, headers, extraRequestOptions) {
+    var self = this;
+    
+    if (typeof(protocols) === 'string') {
+        if (protocols.length > 0) {
+            protocols = [protocols];
+        }
+        else {
+            protocols = [];
+        }
+    }
+    if (!(protocols instanceof Array)) {
+        protocols = [];
+    }
+    this.protocols = protocols;
+    this.origin = origin;
+
+    if (typeof(requestUrl) === 'string') {
+        this.url = url.parse(requestUrl);
+    }
+    else {
+        this.url = requestUrl; // in case an already parsed url is passed in.
+    }
+    if (!this.url.protocol) {
+        throw new Error('You must specify a full WebSocket URL, including protocol.');
+    }
+    if (!this.url.host) {
+        throw new Error('You must specify a full WebSocket URL, including hostname. Relative URLs are not supported.');
+    }
+
+    this.secure = (this.url.protocol === 'wss:');
+
+    // validate protocol characters:
+    this.protocols.forEach(function(protocol) {
+        for (var i=0; i < protocol.length; i ++) {
+            var charCode = protocol.charCodeAt(i);
+            var character = protocol.charAt(i);
+            if (charCode < 0x0021 || charCode > 0x007E || protocolSeparators.indexOf(character) !== -1) {
+                throw new Error('Protocol list contains invalid character "' + String.fromCharCode(charCode) + '"');
+            }
+        }
+    });
+
+    var defaultPorts = {
+        'ws:': '80',
+        'wss:': '443'
+    };
+
+    if (!this.url.port) {
+        this.url.port = defaultPorts[this.url.protocol];
+    }
+
+    var nonce = bufferAllocUnsafe(16);
+    for (var i=0; i < 16; i++) {
+        nonce[i] = Math.round(Math.random()*0xFF);
+    }
+    this.base64nonce = nonce.toString('base64');
+
+    var hostHeaderValue = this.url.hostname;
+    if ((this.url.protocol === 'ws:' && this.url.port !== '80') ||
+        (this.url.protocol === 'wss:' && this.url.port !== '443'))  {
+        hostHeaderValue += (':' + this.url.port);
+    }
+
+    var reqHeaders = {};
+    if (this.secure && this.config.tlsOptions.hasOwnProperty('headers')) {
+      // Allow for additional headers to be provided when connecting via HTTPS
+      extend(reqHeaders, this.config.tlsOptions.headers);
+    }
+    if (headers) {
+      // Explicitly provided headers take priority over any from tlsOptions
+      extend(reqHeaders, headers);
+    }
+    extend(reqHeaders, {
+        'Upgrade': 'websocket',
+        'Connection': 'Upgrade',
+        'Sec-WebSocket-Version': this.config.webSocketVersion.toString(10),
+        'Sec-WebSocket-Key': this.base64nonce,
+        'Host': reqHeaders.Host || hostHeaderValue
+    });
+
+    if (this.protocols.length > 0) {
+        reqHeaders['Sec-WebSocket-Protocol'] = this.protocols.join(', ');
+    }
+    if (this.origin) {
+        if (this.config.webSocketVersion === 13) {
+            reqHeaders['Origin'] = this.origin;
+        }
+        else if (this.config.webSocketVersion === 8) {
+            reqHeaders['Sec-WebSocket-Origin'] = this.origin;
+        }
+    }
+
+    // TODO: Implement extensions
+
+    var pathAndQuery;
+    // Ensure it begins with '/'.
+    if (this.url.pathname) {
+        pathAndQuery = this.url.path;
+    }
+    else if (this.url.path) {
+        pathAndQuery = '/' + this.url.path;
+    }
+    else {
+        pathAndQuery = '/';
+    }
+
+    function handleRequestError(error) {
+        self._req = null;
+        self.emit('connectFailed', error);
+    }
+
+    var requestOptions = {
+        agent: false
+    };
+    if (extraRequestOptions) {
+        extend(requestOptions, extraRequestOptions);
+    }
+    // These options are always overridden by the library.  The user is not
+    // allowed to specify these directly.
+    extend(requestOptions, {
+        hostname: this.url.hostname,
+        port: this.url.port,
+        method: 'GET',
+        path: pathAndQuery,
+        headers: reqHeaders
+    });
+    if (this.secure) {
+        var tlsOptions = this.config.tlsOptions;
+        for (var key in tlsOptions) {
+            if (tlsOptions.hasOwnProperty(key) && excludedTlsOptions.indexOf(key) === -1) {
+                requestOptions[key] = tlsOptions[key];
+            }
+        }
+    }
+
+    var req = this._req = (this.secure ? https : http).request(requestOptions);
+    req.on('upgrade', function handleRequestUpgrade(response, socket, head) {
+        self._req = null;
+        req.removeListener('error', handleRequestError);
+        self.socket = socket;
+        self.response = response;
+        self.firstDataChunk = head;
+        self.validateHandshake();
+    });
+    req.on('error', handleRequestError);
+
+    req.on('response', function(response) {
+        self._req = null;
+        if (utils.eventEmitterListenerCount(self, 'httpResponse') > 0) {
+            self.emit('httpResponse', response, self);
+            if (response.socket) {
+                response.socket.end();
+            }
+        }
+        else {
+            var headerDumpParts = [];
+            for (var headerName in response.headers) {
+                headerDumpParts.push(headerName + ': ' + response.headers[headerName]);
+            }
+            self.failHandshake(
+                'Server responded with a non-101 status: ' +
+                response.statusCode + ' ' + response.statusMessage +
+                '\nResponse Headers Follow:\n' +
+                headerDumpParts.join('\n') + '\n'
+            );
+        }
+    });
+    req.end();
+};
+
+WebSocketClient.prototype.validateHandshake = function() {
+    var headers = this.response.headers;
+
+    if (this.protocols.length > 0) {
+        this.protocol = headers['sec-websocket-protocol'];
+        if (this.protocol) {
+            if (this.protocols.indexOf(this.protocol) === -1) {
+                this.failHandshake('Server did not respond with a requested protocol.');
+                return;
+            }
+        }
+        else {
+            this.failHandshake('Expected a Sec-WebSocket-Protocol header.');
+            return;
+        }
+    }
+
+    if (!(headers['connection'] && headers['connection'].toLocaleLowerCase() === 'upgrade')) {
+        this.failHandshake('Expected a Connection: Upgrade header from the server');
+        return;
+    }
+
+    if (!(headers['upgrade'] && headers['upgrade'].toLocaleLowerCase() === 'websocket')) {
+        this.failHandshake('Expected an Upgrade: websocket header from the server');
+        return;
+    }
+
+    var sha1 = crypto.createHash('sha1');
+    sha1.update(this.base64nonce + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11');
+    var expectedKey = sha1.digest('base64');
+
+    if (!headers['sec-websocket-accept']) {
+        this.failHandshake('Expected Sec-WebSocket-Accept header from server');
+        return;
+    }
+
+    if (headers['sec-websocket-accept'] !== expectedKey) {
+        this.failHandshake('Sec-WebSocket-Accept header from server didn\'t match expected value of ' + expectedKey);
+        return;
+    }
+
+    // TODO: Support extensions
+
+    this.succeedHandshake();
+};
+
+WebSocketClient.prototype.failHandshake = function(errorDescription) {
+    if (this.socket && this.socket.writable) {
+        this.socket.end();
+    }
+    this.emit('connectFailed', new Error(errorDescription));
+};
+
+WebSocketClient.prototype.succeedHandshake = function() {
+    var connection = new WebSocketConnection(this.socket, [], this.protocol, true, this.config);
+
+    connection.webSocketVersion = this.config.webSocketVersion;
+    connection._addSocketEventListeners();
+
+    this.emit('connect', connection);
+    if (this.firstDataChunk.length > 0) {
+        connection.handleSocketData(this.firstDataChunk);
+    }
+    this.firstDataChunk = null;
+};
+
+WebSocketClient.prototype.abort = function() {
+    if (this._req) {
+        this._req.abort();
+    }
+};
+
+module.exports = WebSocketClient;
+
+
+/***/ }),
+
+/***/ 1836:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/************************************************************************
+ *  Copyright 2010-2015 Brian McKelvey.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ***********************************************************************/
+
+var util = __webpack_require__(3837);
+var utils = __webpack_require__(4636);
+var EventEmitter = (__webpack_require__(2361).EventEmitter);
+var WebSocketFrame = __webpack_require__(9650);
+var BufferList = __webpack_require__(6748);
+var isValidUTF8 = __webpack_require__(311);
+var bufferAllocUnsafe = utils.bufferAllocUnsafe;
+var bufferFromString = utils.bufferFromString;
+
+// Connected, fully-open, ready to send and receive frames
+const STATE_OPEN = 'open';
+// Received a close frame from the remote peer
+const STATE_PEER_REQUESTED_CLOSE = 'peer_requested_close';
+// Sent close frame to remote peer.  No further data can be sent.
+const STATE_ENDING = 'ending';
+// Connection is fully closed.  No further data can be sent or received.
+const STATE_CLOSED = 'closed';
+
+var setImmediateImpl = ('setImmediate' in global) ?
+                            global.setImmediate.bind(global) :
+                            process.nextTick.bind(process);
+
+var idCounter = 0;
+
+function WebSocketConnection(socket, extensions, protocol, maskOutgoingPackets, config) {
+    this._debug = utils.BufferingLogger('websocket:connection', ++idCounter);
+    this._debug('constructor');
+    
+    if (this._debug.enabled) {
+        instrumentSocketForDebugging(this, socket);
+    }
+    
+    // Superclass Constructor
+    EventEmitter.call(this);
+
+    this._pingListenerCount = 0;
+    this.on('newListener', function(ev) {
+        if (ev === 'ping'){
+            this._pingListenerCount++;
+        }
+      }).on('removeListener', function(ev) {
+        if (ev === 'ping') {
+            this._pingListenerCount--;
+        }
+    });
+
+    this.config = config;
+    this.socket = socket;
+    this.protocol = protocol;
+    this.extensions = extensions;
+    this.remoteAddress = socket.remoteAddress;
+    this.closeReasonCode = -1;
+    this.closeDescription = null;
+    this.closeEventEmitted = false;
+
+    // We have to mask outgoing packets if we're acting as a WebSocket client.
+    this.maskOutgoingPackets = maskOutgoingPackets;
+
+    // We re-use the same buffers for the mask and frame header for all frames
+    // received on each connection to avoid a small memory allocation for each
+    // frame.
+    this.maskBytes = bufferAllocUnsafe(4);
+    this.frameHeader = bufferAllocUnsafe(10);
+
+    // the BufferList will handle the data streaming in
+    this.bufferList = new BufferList();
+
+    // Prepare for receiving first frame
+    this.currentFrame = new WebSocketFrame(this.maskBytes, this.frameHeader, this.config);
+    this.fragmentationSize = 0; // data received so far...
+    this.frameQueue = [];
+    
+    // Various bits of connection state
+    this.connected = true;
+    this.state = STATE_OPEN;
+    this.waitingForCloseResponse = false;
+    // Received TCP FIN, socket's readable stream is finished.
+    this.receivedEnd = false;
+
+    this.closeTimeout = this.config.closeTimeout;
+    this.assembleFragments = this.config.assembleFragments;
+    this.maxReceivedMessageSize = this.config.maxReceivedMessageSize;
+
+    this.outputBufferFull = false;
+    this.inputPaused = false;
+    this.receivedDataHandler = this.processReceivedData.bind(this);
+    this._closeTimerHandler = this.handleCloseTimer.bind(this);
+
+    // Disable nagle algorithm?
+    this.socket.setNoDelay(this.config.disableNagleAlgorithm);
+
+    // Make sure there is no socket inactivity timeout
+    this.socket.setTimeout(0);
+
+    if (this.config.keepalive && !this.config.useNativeKeepalive) {
+        if (typeof(this.config.keepaliveInterval) !== 'number') {
+            throw new Error('keepaliveInterval must be specified and numeric ' +
+                            'if keepalive is true.');
+        }
+        this._keepaliveTimerHandler = this.handleKeepaliveTimer.bind(this);
+        this.setKeepaliveTimer();
+
+        if (this.config.dropConnectionOnKeepaliveTimeout) {
+            if (typeof(this.config.keepaliveGracePeriod) !== 'number') {
+                throw new Error('keepaliveGracePeriod  must be specified and ' +
+                                'numeric if dropConnectionOnKeepaliveTimeout ' +
+                                'is true.');
+            }
+            this._gracePeriodTimerHandler = this.handleGracePeriodTimer.bind(this);
+        }
+    }
+    else if (this.config.keepalive && this.config.useNativeKeepalive) {
+        if (!('setKeepAlive' in this.socket)) {
+            throw new Error('Unable to use native keepalive: unsupported by ' +
+                            'this version of Node.');
+        }
+        this.socket.setKeepAlive(true, this.config.keepaliveInterval);
+    }
+    
+    // The HTTP Client seems to subscribe to socket error events
+    // and re-dispatch them in such a way that doesn't make sense
+    // for users of our client, so we want to make sure nobody
+    // else is listening for error events on the socket besides us.
+    this.socket.removeAllListeners('error');
+}
+
+WebSocketConnection.CLOSE_REASON_NORMAL = 1000;
+WebSocketConnection.CLOSE_REASON_GOING_AWAY = 1001;
+WebSocketConnection.CLOSE_REASON_PROTOCOL_ERROR = 1002;
+WebSocketConnection.CLOSE_REASON_UNPROCESSABLE_INPUT = 1003;
+WebSocketConnection.CLOSE_REASON_RESERVED = 1004; // Reserved value.  Undefined meaning.
+WebSocketConnection.CLOSE_REASON_NOT_PROVIDED = 1005; // Not to be used on the wire
+WebSocketConnection.CLOSE_REASON_ABNORMAL = 1006; // Not to be used on the wire
+WebSocketConnection.CLOSE_REASON_INVALID_DATA = 1007;
+WebSocketConnection.CLOSE_REASON_POLICY_VIOLATION = 1008;
+WebSocketConnection.CLOSE_REASON_MESSAGE_TOO_BIG = 1009;
+WebSocketConnection.CLOSE_REASON_EXTENSION_REQUIRED = 1010;
+WebSocketConnection.CLOSE_REASON_INTERNAL_SERVER_ERROR = 1011;
+WebSocketConnection.CLOSE_REASON_TLS_HANDSHAKE_FAILED = 1015; // Not to be used on the wire
+
+WebSocketConnection.CLOSE_DESCRIPTIONS = {
+    1000: 'Normal connection closure',
+    1001: 'Remote peer is going away',
+    1002: 'Protocol error',
+    1003: 'Unprocessable input',
+    1004: 'Reserved',
+    1005: 'Reason not provided',
+    1006: 'Abnormal closure, no further detail available',
+    1007: 'Invalid data received',
+    1008: 'Policy violation',
+    1009: 'Message too big',
+    1010: 'Extension requested by client is required',
+    1011: 'Internal Server Error',
+    1015: 'TLS Handshake Failed'
+};
+
+function validateCloseReason(code) {
+    if (code < 1000) {
+        // Status codes in the range 0-999 are not used
+        return false;
+    }
+    if (code >= 1000 && code <= 2999) {
+        // Codes from 1000 - 2999 are reserved for use by the protocol.  Only
+        // a few codes are defined, all others are currently illegal.
+        return [1000, 1001, 1002, 1003, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015].indexOf(code) !== -1;
+    }
+    if (code >= 3000 && code <= 3999) {
+        // Reserved for use by libraries, frameworks, and applications.
+        // Should be registered with IANA.  Interpretation of these codes is
+        // undefined by the WebSocket protocol.
+        return true;
+    }
+    if (code >= 4000 && code <= 4999) {
+        // Reserved for private use.  Interpretation of these codes is
+        // undefined by the WebSocket protocol.
+        return true;
+    }
+    if (code >= 5000) {
+        return false;
+    }
+}
+
+util.inherits(WebSocketConnection, EventEmitter);
+
+WebSocketConnection.prototype._addSocketEventListeners = function() {
+    this.socket.on('error', this.handleSocketError.bind(this));
+    this.socket.on('end', this.handleSocketEnd.bind(this));
+    this.socket.on('close', this.handleSocketClose.bind(this));
+    this.socket.on('drain', this.handleSocketDrain.bind(this));
+    this.socket.on('pause', this.handleSocketPause.bind(this));
+    this.socket.on('resume', this.handleSocketResume.bind(this));
+    this.socket.on('data', this.handleSocketData.bind(this));
+};
+
+// set or reset the keepalive timer when data is received.
+WebSocketConnection.prototype.setKeepaliveTimer = function() {
+    this._debug('setKeepaliveTimer');
+    if (!this.config.keepalive  || this.config.useNativeKeepalive) { return; }
+    this.clearKeepaliveTimer();
+    this.clearGracePeriodTimer();
+    this._keepaliveTimeoutID = setTimeout(this._keepaliveTimerHandler, this.config.keepaliveInterval);
+};
+
+WebSocketConnection.prototype.clearKeepaliveTimer = function() {
+    if (this._keepaliveTimeoutID) {
+        clearTimeout(this._keepaliveTimeoutID);
+    }
+};
+
+// No data has been received within config.keepaliveTimeout ms.
+WebSocketConnection.prototype.handleKeepaliveTimer = function() {
+    this._debug('handleKeepaliveTimer');
+    this._keepaliveTimeoutID = null;
+    this.ping();
+
+    // If we are configured to drop connections if the client doesn't respond
+    // then set the grace period timer.
+    if (this.config.dropConnectionOnKeepaliveTimeout) {
+        this.setGracePeriodTimer();
+    }
+    else {
+        // Otherwise reset the keepalive timer to send the next ping.
+        this.setKeepaliveTimer();
+    }
+};
+
+WebSocketConnection.prototype.setGracePeriodTimer = function() {
+    this._debug('setGracePeriodTimer');
+    this.clearGracePeriodTimer();
+    this._gracePeriodTimeoutID = setTimeout(this._gracePeriodTimerHandler, this.config.keepaliveGracePeriod);
+};
+
+WebSocketConnection.prototype.clearGracePeriodTimer = function() {
+    if (this._gracePeriodTimeoutID) {
+        clearTimeout(this._gracePeriodTimeoutID);
+    }
+};
+
+WebSocketConnection.prototype.handleGracePeriodTimer = function() {
+    this._debug('handleGracePeriodTimer');
+    // If this is called, the client has not responded and is assumed dead.
+    this._gracePeriodTimeoutID = null;
+    this.drop(WebSocketConnection.CLOSE_REASON_ABNORMAL, 'Peer not responding.', true);
+};
+
+WebSocketConnection.prototype.handleSocketData = function(data) {
+    this._debug('handleSocketData');
+    // Reset the keepalive timer when receiving data of any kind.
+    this.setKeepaliveTimer();
+
+    // Add received data to our bufferList, which efficiently holds received
+    // data chunks in a linked list of Buffer objects.
+    this.bufferList.write(data);
+
+    this.processReceivedData();
+};
+
+WebSocketConnection.prototype.processReceivedData = function() {
+    this._debug('processReceivedData');
+    // If we're not connected, we should ignore any data remaining on the buffer.
+    if (!this.connected) { return; }
+
+    // Receiving/parsing is expected to be halted when paused.
+    if (this.inputPaused) { return; }
+
+    var frame = this.currentFrame;
+
+    // WebSocketFrame.prototype.addData returns true if all data necessary to
+    // parse the frame was available.  It returns false if we are waiting for
+    // more data to come in on the wire.
+    if (!frame.addData(this.bufferList)) { this._debug('-- insufficient data for frame'); return; }
+
+    var self = this;
+
+    // Handle possible parsing errors
+    if (frame.protocolError) {
+        // Something bad happened.. get rid of this client.
+        this._debug('-- protocol error');
+        process.nextTick(function() {
+            self.drop(WebSocketConnection.CLOSE_REASON_PROTOCOL_ERROR, frame.dropReason);
+        });
+        return;
+    }
+    else if (frame.frameTooLarge) {
+        this._debug('-- frame too large');
+        process.nextTick(function() {
+            self.drop(WebSocketConnection.CLOSE_REASON_MESSAGE_TOO_BIG, frame.dropReason);
+        });
+        return;
+    }
+
+    // For now since we don't support extensions, all RSV bits are illegal
+    if (frame.rsv1 || frame.rsv2 || frame.rsv3) {
+        this._debug('-- illegal rsv flag');
+        process.nextTick(function() {
+            self.drop(WebSocketConnection.CLOSE_REASON_PROTOCOL_ERROR,
+              'Unsupported usage of rsv bits without negotiated extension.');
+        });
+        return;
+    }
+
+    if (!this.assembleFragments) {
+        this._debug('-- emitting frame');
+        process.nextTick(function() { self.emit('frame', frame); });
+    }
+
+    process.nextTick(function() { self.processFrame(frame); });
+    
+    this.currentFrame = new WebSocketFrame(this.maskBytes, this.frameHeader, this.config);
+
+    // If there's data remaining, schedule additional processing, but yield
+    // for now so that other connections have a chance to have their data
+    // processed.  We use setImmediate here instead of process.nextTick to
+    // explicitly indicate that we wish for other I/O to be handled first.
+    if (this.bufferList.length > 0) {
+        setImmediateImpl(this.receivedDataHandler);
+    }
+};
+
+WebSocketConnection.prototype.handleSocketError = function(error) {
+    this._debug('handleSocketError: %j', error);
+    if (this.state === STATE_CLOSED) {
+		// See https://github.com/theturtle32/WebSocket-Node/issues/288
+        this._debug('  --- Socket \'error\' after \'close\'');
+        return;
+    }
+    this.closeReasonCode = WebSocketConnection.CLOSE_REASON_ABNORMAL;
+    this.closeDescription = 'Socket Error: ' + error.syscall + ' ' + error.code;
+    this.connected = false;
+    this.state = STATE_CLOSED;
+    this.fragmentationSize = 0;
+    if (utils.eventEmitterListenerCount(this, 'error') > 0) {
+        this.emit('error', error);
+    }
+    this.socket.destroy();
+    this._debug.printOutput();
+};
+
+WebSocketConnection.prototype.handleSocketEnd = function() {
+    this._debug('handleSocketEnd: received socket end.  state = %s', this.state);
+    this.receivedEnd = true;
+    if (this.state === STATE_CLOSED) {
+        // When using the TLS module, sometimes the socket will emit 'end'
+        // after it emits 'close'.  I don't think that's correct behavior,
+        // but we should deal with it gracefully by ignoring it.
+        this._debug('  --- Socket \'end\' after \'close\'');
+        return;
+    }
+    if (this.state !== STATE_PEER_REQUESTED_CLOSE &&
+        this.state !== STATE_ENDING) {
+      this._debug('  --- UNEXPECTED socket end.');
+      this.socket.end();
+    }
+};
+
+WebSocketConnection.prototype.handleSocketClose = function(hadError) {
+    this._debug('handleSocketClose: received socket close');
+    this.socketHadError = hadError;
+    this.connected = false;
+    this.state = STATE_CLOSED;
+    // If closeReasonCode is still set to -1 at this point then we must
+    // not have received a close frame!!
+    if (this.closeReasonCode === -1) {
+        this.closeReasonCode = WebSocketConnection.CLOSE_REASON_ABNORMAL;
+        this.closeDescription = 'Connection dropped by remote peer.';
+    }
+    this.clearCloseTimer();
+    this.clearKeepaliveTimer();
+    this.clearGracePeriodTimer();
+    if (!this.closeEventEmitted) {
+        this.closeEventEmitted = true;
+        this._debug('-- Emitting WebSocketConnection close event');
+        this.emit('close', this.closeReasonCode, this.closeDescription);
+    }
+};
+
+WebSocketConnection.prototype.handleSocketDrain = function() {
+    this._debug('handleSocketDrain: socket drain event');
+    this.outputBufferFull = false;
+    this.emit('drain');
+};
+
+WebSocketConnection.prototype.handleSocketPause = function() {
+    this._debug('handleSocketPause: socket pause event');
+    this.inputPaused = true;
+    this.emit('pause');
+};
+
+WebSocketConnection.prototype.handleSocketResume = function() {
+    this._debug('handleSocketResume: socket resume event');
+    this.inputPaused = false;
+    this.emit('resume');
+    this.processReceivedData();
+};
+
+WebSocketConnection.prototype.pause = function() {
+    this._debug('pause: pause requested');
+    this.socket.pause();
+};
+
+WebSocketConnection.prototype.resume = function() {
+    this._debug('resume: resume requested');
+    this.socket.resume();
+};
+
+WebSocketConnection.prototype.close = function(reasonCode, description) {
+    if (this.connected) {
+        this._debug('close: Initating clean WebSocket close sequence.');
+        if ('number' !== typeof reasonCode) {
+            reasonCode = WebSocketConnection.CLOSE_REASON_NORMAL;
+        }
+        if (!validateCloseReason(reasonCode)) {
+            throw new Error('Close code ' + reasonCode + ' is not valid.');
+        }
+        if ('string' !== typeof description) {
+            description = WebSocketConnection.CLOSE_DESCRIPTIONS[reasonCode];
+        }
+        this.closeReasonCode = reasonCode;
+        this.closeDescription = description;
+        this.setCloseTimer();
+        this.sendCloseFrame(this.closeReasonCode, this.closeDescription);
+        this.state = STATE_ENDING;
+        this.connected = false;
+    }
+};
+
+WebSocketConnection.prototype.drop = function(reasonCode, description, skipCloseFrame) {
+    this._debug('drop');
+    if (typeof(reasonCode) !== 'number') {
+        reasonCode = WebSocketConnection.CLOSE_REASON_PROTOCOL_ERROR;
+    }
+
+    if (typeof(description) !== 'string') {
+        // If no description is provided, try to look one up based on the
+        // specified reasonCode.
+        description = WebSocketConnection.CLOSE_DESCRIPTIONS[reasonCode];
+    }
+
+    this._debug('Forcefully dropping connection. skipCloseFrame: %s, code: %d, description: %s',
+        skipCloseFrame, reasonCode, description
+    );
+
+    this.closeReasonCode = reasonCode;
+    this.closeDescription = description;
+    this.frameQueue = [];
+    this.fragmentationSize = 0;
+    if (!skipCloseFrame) {
+        this.sendCloseFrame(reasonCode, description);
+    }
+    this.connected = false;
+    this.state = STATE_CLOSED;
+    this.clearCloseTimer();
+    this.clearKeepaliveTimer();
+    this.clearGracePeriodTimer();
+
+    if (!this.closeEventEmitted) {
+        this.closeEventEmitted = true;
+        this._debug('Emitting WebSocketConnection close event');
+        this.emit('close', this.closeReasonCode, this.closeDescription);
+    }
+    
+    this._debug('Drop: destroying socket');
+    this.socket.destroy();
+};
+
+WebSocketConnection.prototype.setCloseTimer = function() {
+    this._debug('setCloseTimer');
+    this.clearCloseTimer();
+    this._debug('Setting close timer');
+    this.waitingForCloseResponse = true;
+    this.closeTimer = setTimeout(this._closeTimerHandler, this.closeTimeout);
+};
+
+WebSocketConnection.prototype.clearCloseTimer = function() {
+    this._debug('clearCloseTimer');
+    if (this.closeTimer) {
+        this._debug('Clearing close timer');
+        clearTimeout(this.closeTimer);
+        this.waitingForCloseResponse = false;
+        this.closeTimer = null;
+    }
+};
+
+WebSocketConnection.prototype.handleCloseTimer = function() {
+    this._debug('handleCloseTimer');
+    this.closeTimer = null;
+    if (this.waitingForCloseResponse) {
+        this._debug('Close response not received from client.  Forcing socket end.');
+        this.waitingForCloseResponse = false;
+        this.state = STATE_CLOSED;
+        this.socket.end();
+    }
+};
+
+WebSocketConnection.prototype.processFrame = function(frame) {
+    this._debug('processFrame');
+    this._debug(' -- frame: %s', frame);
+    
+    // Any non-control opcode besides 0x00 (continuation) received in the
+    // middle of a fragmented message is illegal.
+    if (this.frameQueue.length !== 0 && (frame.opcode > 0x00 && frame.opcode < 0x08)) {
+        this.drop(WebSocketConnection.CLOSE_REASON_PROTOCOL_ERROR,
+          'Illegal frame opcode 0x' + frame.opcode.toString(16) + ' ' +
+          'received in middle of fragmented message.');
+        return;
+    }
+
+    switch(frame.opcode) {
+        case 0x02: // WebSocketFrame.BINARY_FRAME
+            this._debug('-- Binary Frame');
+            if (this.assembleFragments) {
+                if (frame.fin) {
+                    // Complete single-frame message received
+                    this._debug('---- Emitting \'message\' event');
+                    this.emit('message', {
+                        type: 'binary',
+                        binaryData: frame.binaryPayload
+                    });
+                }
+                else {
+                    // beginning of a fragmented message
+                    this.frameQueue.push(frame);
+                    this.fragmentationSize = frame.length;
+                }
+            }
+            break;
+        case 0x01: // WebSocketFrame.TEXT_FRAME
+            this._debug('-- Text Frame');
+            if (this.assembleFragments) {
+                if (frame.fin) {
+                    if (!isValidUTF8(frame.binaryPayload)) {
+                        this.drop(WebSocketConnection.CLOSE_REASON_INVALID_DATA,
+                          'Invalid UTF-8 Data Received');
+                        return;
+                    }
+                    // Complete single-frame message received
+                    this._debug('---- Emitting \'message\' event');
+                    this.emit('message', {
+                        type: 'utf8',
+                        utf8Data: frame.binaryPayload.toString('utf8')
+                    });
+                }
+                else {
+                    // beginning of a fragmented message
+                    this.frameQueue.push(frame);
+                    this.fragmentationSize = frame.length;
+                }
+            }
+            break;
+        case 0x00: // WebSocketFrame.CONTINUATION
+            this._debug('-- Continuation Frame');
+            if (this.assembleFragments) {
+                if (this.frameQueue.length === 0) {
+                    this.drop(WebSocketConnection.CLOSE_REASON_PROTOCOL_ERROR,
+                      'Unexpected Continuation Frame');
+                    return;
+                }
+
+                this.fragmentationSize += frame.length;
+
+                if (this.fragmentationSize > this.maxReceivedMessageSize) {
+                    this.drop(WebSocketConnection.CLOSE_REASON_MESSAGE_TOO_BIG,
+                      'Maximum message size exceeded.');
+                    return;
+                }
+
+                this.frameQueue.push(frame);
+
+                if (frame.fin) {
+                    // end of fragmented message, so we process the whole
+                    // message now.  We also have to decode the utf-8 data
+                    // for text frames after combining all the fragments.
+                    var bytesCopied = 0;
+                    var binaryPayload = bufferAllocUnsafe(this.fragmentationSize);
+                    var opcode = this.frameQueue[0].opcode;
+                    this.frameQueue.forEach(function (currentFrame) {
+                        currentFrame.binaryPayload.copy(binaryPayload, bytesCopied);
+                        bytesCopied += currentFrame.binaryPayload.length;
+                    });
+                    this.frameQueue = [];
+                    this.fragmentationSize = 0;
+
+                    switch (opcode) {
+                        case 0x02: // WebSocketOpcode.BINARY_FRAME
+                            this.emit('message', {
+                                type: 'binary',
+                                binaryData: binaryPayload
+                            });
+                            break;
+                        case 0x01: // WebSocketOpcode.TEXT_FRAME
+                            if (!isValidUTF8(binaryPayload)) {
+                                this.drop(WebSocketConnection.CLOSE_REASON_INVALID_DATA,
+                                  'Invalid UTF-8 Data Received');
+                                return;
+                            }
+                            this.emit('message', {
+                                type: 'utf8',
+                                utf8Data: binaryPayload.toString('utf8')
+                            });
+                            break;
+                        default:
+                            this.drop(WebSocketConnection.CLOSE_REASON_PROTOCOL_ERROR,
+                              'Unexpected first opcode in fragmentation sequence: 0x' + opcode.toString(16));
+                            return;
+                    }
+                }
+            }
+            break;
+        case 0x09: // WebSocketFrame.PING
+            this._debug('-- Ping Frame');
+
+            if (this._pingListenerCount > 0) {
+                // logic to emit the ping frame: this is only done when a listener is known to exist
+                // Expose a function allowing the user to override the default ping() behavior
+                var cancelled = false;
+                var cancel = function() { 
+                  cancelled = true; 
+                };
+                this.emit('ping', cancel, frame.binaryPayload);
+
+                // Only send a pong if the client did not indicate that he would like to cancel
+                if (!cancelled) {
+                    this.pong(frame.binaryPayload);
+                }
+            }
+            else {
+                this.pong(frame.binaryPayload);
+            }
+
+            break;
+        case 0x0A: // WebSocketFrame.PONG
+            this._debug('-- Pong Frame');
+            this.emit('pong', frame.binaryPayload);
+            break;
+        case 0x08: // WebSocketFrame.CONNECTION_CLOSE
+            this._debug('-- Close Frame');
+            if (this.waitingForCloseResponse) {
+                // Got response to our request to close the connection.
+                // Close is complete, so we just hang up.
+                this._debug('---- Got close response from peer.  Completing closing handshake.');
+                this.clearCloseTimer();
+                this.waitingForCloseResponse = false;
+                this.state = STATE_CLOSED;
+                this.socket.end();
+                return;
+            }
+            
+            this._debug('---- Closing handshake initiated by peer.');
+            // Got request from other party to close connection.
+            // Send back acknowledgement and then hang up.
+            this.state = STATE_PEER_REQUESTED_CLOSE;
+            var respondCloseReasonCode;
+
+            // Make sure the close reason provided is legal according to
+            // the protocol spec.  Providing no close status is legal.
+            // WebSocketFrame sets closeStatus to -1 by default, so if it
+            // is still -1, then no status was provided.
+            if (frame.invalidCloseFrameLength) {
+                this.closeReasonCode = 1005; // 1005 = No reason provided.
+                respondCloseReasonCode = WebSocketConnection.CLOSE_REASON_PROTOCOL_ERROR;
+            }
+            else if (frame.closeStatus === -1 || validateCloseReason(frame.closeStatus)) {
+                this.closeReasonCode = frame.closeStatus;
+                respondCloseReasonCode = WebSocketConnection.CLOSE_REASON_NORMAL;
+            }
+            else {
+                this.closeReasonCode = frame.closeStatus;
+                respondCloseReasonCode = WebSocketConnection.CLOSE_REASON_PROTOCOL_ERROR;
+            }
+            
+            // If there is a textual description in the close frame, extract it.
+            if (frame.binaryPayload.length > 1) {
+                if (!isValidUTF8(frame.binaryPayload)) {
+                    this.drop(WebSocketConnection.CLOSE_REASON_INVALID_DATA,
+                      'Invalid UTF-8 Data Received');
+                    return;
+                }
+                this.closeDescription = frame.binaryPayload.toString('utf8');
+            }
+            else {
+                this.closeDescription = WebSocketConnection.CLOSE_DESCRIPTIONS[this.closeReasonCode];
+            }
+            this._debug(
+                '------ Remote peer %s - code: %d - %s - close frame payload length: %d',
+                this.remoteAddress, this.closeReasonCode,
+                this.closeDescription, frame.length
+            );
+            this._debug('------ responding to remote peer\'s close request.');
+            this.sendCloseFrame(respondCloseReasonCode, null);
+            this.connected = false;
+            break;
+        default:
+            this._debug('-- Unrecognized Opcode %d', frame.opcode);
+            this.drop(WebSocketConnection.CLOSE_REASON_PROTOCOL_ERROR,
+              'Unrecognized Opcode: 0x' + frame.opcode.toString(16));
+            break;
+    }
+};
+
+WebSocketConnection.prototype.send = function(data, cb) {
+    this._debug('send');
+    if (Buffer.isBuffer(data)) {
+        this.sendBytes(data, cb);
+    }
+    else if (typeof(data['toString']) === 'function') {
+        this.sendUTF(data, cb);
+    }
+    else {
+        throw new Error('Data provided must either be a Node Buffer or implement toString()');
+    }
+};
+
+WebSocketConnection.prototype.sendUTF = function(data, cb) {
+    data = bufferFromString(data.toString(), 'utf8');
+    this._debug('sendUTF: %d bytes', data.length);
+    var frame = new WebSocketFrame(this.maskBytes, this.frameHeader, this.config);
+    frame.opcode = 0x01; // WebSocketOpcode.TEXT_FRAME
+    frame.binaryPayload = data;
+    this.fragmentAndSend(frame, cb);
+};
+
+WebSocketConnection.prototype.sendBytes = function(data, cb) {
+    this._debug('sendBytes');
+    if (!Buffer.isBuffer(data)) {
+        throw new Error('You must pass a Node Buffer object to WebSocketConnection.prototype.sendBytes()');
+    }
+    var frame = new WebSocketFrame(this.maskBytes, this.frameHeader, this.config);
+    frame.opcode = 0x02; // WebSocketOpcode.BINARY_FRAME
+    frame.binaryPayload = data;
+    this.fragmentAndSend(frame, cb);
+};
+
+WebSocketConnection.prototype.ping = function(data) {
+    this._debug('ping');
+    var frame = new WebSocketFrame(this.maskBytes, this.frameHeader, this.config);
+    frame.opcode = 0x09; // WebSocketOpcode.PING
+    frame.fin = true;
+    if (data) {
+        if (!Buffer.isBuffer(data)) {
+            data = bufferFromString(data.toString(), 'utf8');
+        }
+        if (data.length > 125) {
+            this._debug('WebSocket: Data for ping is longer than 125 bytes.  Truncating.');
+            data = data.slice(0,124);
+        }
+        frame.binaryPayload = data;
+    }
+    this.sendFrame(frame);
+};
+
+// Pong frames have to echo back the contents of the data portion of the
+// ping frame exactly, byte for byte.
+WebSocketConnection.prototype.pong = function(binaryPayload) {
+    this._debug('pong');
+    var frame = new WebSocketFrame(this.maskBytes, this.frameHeader, this.config);
+    frame.opcode = 0x0A; // WebSocketOpcode.PONG
+    if (Buffer.isBuffer(binaryPayload) && binaryPayload.length > 125) {
+        this._debug('WebSocket: Data for pong is longer than 125 bytes.  Truncating.');
+        binaryPayload = binaryPayload.slice(0,124);
+    }
+    frame.binaryPayload = binaryPayload;
+    frame.fin = true;
+    this.sendFrame(frame);
+};
+
+WebSocketConnection.prototype.fragmentAndSend = function(frame, cb) {
+    this._debug('fragmentAndSend');
+    if (frame.opcode > 0x07) {
+        throw new Error('You cannot fragment control frames.');
+    }
+
+    var threshold = this.config.fragmentationThreshold;
+    var length = frame.binaryPayload.length;
+
+    // Send immediately if fragmentation is disabled or the message is not
+    // larger than the fragmentation threshold.
+    if (!this.config.fragmentOutgoingMessages || (frame.binaryPayload && length <= threshold)) {
+        frame.fin = true;
+        this.sendFrame(frame, cb);
+        return;
+    }
+    
+    var numFragments = Math.ceil(length / threshold);
+    var sentFragments = 0;
+    var sentCallback = function fragmentSentCallback(err) {
+        if (err) {
+            if (typeof cb === 'function') {
+                // pass only the first error
+                cb(err);
+                cb = null;
+            }
+            return;
+        }
+        ++sentFragments;
+        if ((sentFragments === numFragments) && (typeof cb === 'function')) {
+            cb();
+        }
+    };
+    for (var i=1; i <= numFragments; i++) {
+        var currentFrame = new WebSocketFrame(this.maskBytes, this.frameHeader, this.config);
+        
+        // continuation opcode except for first frame.
+        currentFrame.opcode = (i === 1) ? frame.opcode : 0x00;
+        
+        // fin set on last frame only
+        currentFrame.fin = (i === numFragments);
+        
+        // length is likely to be shorter on the last fragment
+        var currentLength = (i === numFragments) ? length - (threshold * (i-1)) : threshold;
+        var sliceStart = threshold * (i-1);
+        
+        // Slice the right portion of the original payload
+        currentFrame.binaryPayload = frame.binaryPayload.slice(sliceStart, sliceStart + currentLength);
+        
+        this.sendFrame(currentFrame, sentCallback);
+    }
+};
+
+WebSocketConnection.prototype.sendCloseFrame = function(reasonCode, description, cb) {
+    if (typeof(reasonCode) !== 'number') {
+        reasonCode = WebSocketConnection.CLOSE_REASON_NORMAL;
+    }
+    
+    this._debug('sendCloseFrame state: %s, reasonCode: %d, description: %s', this.state, reasonCode, description);
+    
+    if (this.state !== STATE_OPEN && this.state !== STATE_PEER_REQUESTED_CLOSE) { return; }
+    
+    var frame = new WebSocketFrame(this.maskBytes, this.frameHeader, this.config);
+    frame.fin = true;
+    frame.opcode = 0x08; // WebSocketOpcode.CONNECTION_CLOSE
+    frame.closeStatus = reasonCode;
+    if (typeof(description) === 'string') {
+        frame.binaryPayload = bufferFromString(description, 'utf8');
+    }
+    
+    this.sendFrame(frame, cb);
+    this.socket.end();
+};
+
+WebSocketConnection.prototype.sendFrame = function(frame, cb) {
+    this._debug('sendFrame');
+    frame.mask = this.maskOutgoingPackets;
+    var flushed = this.socket.write(frame.toBuffer(), cb);
+    this.outputBufferFull = !flushed;
+    return flushed;
+};
+
+module.exports = WebSocketConnection;
+
+
+
+function instrumentSocketForDebugging(connection, socket) {
+    /* jshint loopfunc: true */
+    if (!connection._debug.enabled) { return; }
+    
+    var originalSocketEmit = socket.emit;
+    socket.emit = function(event) {
+        connection._debug('||| Socket Event  \'%s\'', event);
+        originalSocketEmit.apply(this, arguments);
+    };
+    
+    for (var key in socket) {
+        if ('function' !== typeof(socket[key])) { continue; }
+        if (['emit'].indexOf(key) !== -1) { continue; }
+        (function(key) {
+            var original = socket[key];
+            if (key === 'on') {
+                socket[key] = function proxyMethod__EventEmitter__On() {
+                    connection._debug('||| Socket method called:  %s (%s)', key, arguments[0]);
+                    return original.apply(this, arguments);
+                };
+                return;
+            }
+            socket[key] = function proxyMethod() {
+                connection._debug('||| Socket method called:  %s', key);
+                return original.apply(this, arguments);
+            };
+        })(key);
+    }
+}
+
+
+/***/ }),
+
+/***/ 9650:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/************************************************************************
+ *  Copyright 2010-2015 Brian McKelvey.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ***********************************************************************/
+
+var bufferUtil = __webpack_require__(1891);
+var bufferAllocUnsafe = (__webpack_require__(4636).bufferAllocUnsafe);
+
+const DECODE_HEADER = 1;
+const WAITING_FOR_16_BIT_LENGTH = 2;
+const WAITING_FOR_64_BIT_LENGTH = 3;
+const WAITING_FOR_MASK_KEY = 4;
+const WAITING_FOR_PAYLOAD = 5;
+const COMPLETE = 6;
+
+// WebSocketConnection will pass shared buffer objects for maskBytes and
+// frameHeader into the constructor to avoid tons of small memory allocations
+// for each frame we have to parse.  This is only used for parsing frames
+// we receive off the wire.
+function WebSocketFrame(maskBytes, frameHeader, config) {
+    this.maskBytes = maskBytes;
+    this.frameHeader = frameHeader;
+    this.config = config;
+    this.maxReceivedFrameSize = config.maxReceivedFrameSize;
+    this.protocolError = false;
+    this.frameTooLarge = false;
+    this.invalidCloseFrameLength = false;
+    this.parseState = DECODE_HEADER;
+    this.closeStatus = -1;
+}
+
+WebSocketFrame.prototype.addData = function(bufferList) {
+    if (this.parseState === DECODE_HEADER) {
+        if (bufferList.length >= 2) {
+            bufferList.joinInto(this.frameHeader, 0, 0, 2);
+            bufferList.advance(2);
+            var firstByte = this.frameHeader[0];
+            var secondByte = this.frameHeader[1];
+
+            this.fin     = Boolean(firstByte  & 0x80);
+            this.rsv1    = Boolean(firstByte  & 0x40);
+            this.rsv2    = Boolean(firstByte  & 0x20);
+            this.rsv3    = Boolean(firstByte  & 0x10);
+            this.mask    = Boolean(secondByte & 0x80);
+
+            this.opcode  = firstByte  & 0x0F;
+            this.length = secondByte & 0x7F;
+
+            // Control frame sanity check
+            if (this.opcode >= 0x08) {
+                if (this.length > 125) {
+                    this.protocolError = true;
+                    this.dropReason = 'Illegal control frame longer than 125 bytes.';
+                    return true;
+                }
+                if (!this.fin) {
+                    this.protocolError = true;
+                    this.dropReason = 'Control frames must not be fragmented.';
+                    return true;
+                }
+            }
+
+            if (this.length === 126) {
+                this.parseState = WAITING_FOR_16_BIT_LENGTH;
+            }
+            else if (this.length === 127) {
+                this.parseState = WAITING_FOR_64_BIT_LENGTH;
+            }
+            else {
+                this.parseState = WAITING_FOR_MASK_KEY;
+            }
+        }
+    }
+    if (this.parseState === WAITING_FOR_16_BIT_LENGTH) {
+        if (bufferList.length >= 2) {
+            bufferList.joinInto(this.frameHeader, 2, 0, 2);
+            bufferList.advance(2);
+            this.length = this.frameHeader.readUInt16BE(2);
+            this.parseState = WAITING_FOR_MASK_KEY;
+        }
+    }
+    else if (this.parseState === WAITING_FOR_64_BIT_LENGTH) {
+        if (bufferList.length >= 8) {
+            bufferList.joinInto(this.frameHeader, 2, 0, 8);
+            bufferList.advance(8);
+            var lengthPair = [
+              this.frameHeader.readUInt32BE(2),
+              this.frameHeader.readUInt32BE(2+4)
+            ];
+
+            if (lengthPair[0] !== 0) {
+                this.protocolError = true;
+                this.dropReason = 'Unsupported 64-bit length frame received';
+                return true;
+            }
+            this.length = lengthPair[1];
+            this.parseState = WAITING_FOR_MASK_KEY;
+        }
+    }
+
+    if (this.parseState === WAITING_FOR_MASK_KEY) {
+        if (this.mask) {
+            if (bufferList.length >= 4) {
+                bufferList.joinInto(this.maskBytes, 0, 0, 4);
+                bufferList.advance(4);
+                this.parseState = WAITING_FOR_PAYLOAD;
+            }
+        }
+        else {
+            this.parseState = WAITING_FOR_PAYLOAD;
+        }
+    }
+
+    if (this.parseState === WAITING_FOR_PAYLOAD) {
+        if (this.length > this.maxReceivedFrameSize) {
+            this.frameTooLarge = true;
+            this.dropReason = 'Frame size of ' + this.length.toString(10) +
+                              ' bytes exceeds maximum accepted frame size';
+            return true;
+        }
+
+        if (this.length === 0) {
+            this.binaryPayload = bufferAllocUnsafe(0);
+            this.parseState = COMPLETE;
+            return true;
+        }
+        if (bufferList.length >= this.length) {
+            this.binaryPayload = bufferList.take(this.length);
+            bufferList.advance(this.length);
+            if (this.mask) {
+                bufferUtil.unmask(this.binaryPayload, this.maskBytes);
+                // xor(this.binaryPayload, this.maskBytes, 0);
+            }
+
+            if (this.opcode === 0x08) { // WebSocketOpcode.CONNECTION_CLOSE
+                if (this.length === 1) {
+                    // Invalid length for a close frame.  Must be zero or at least two.
+                    this.binaryPayload = bufferAllocUnsafe(0);
+                    this.invalidCloseFrameLength = true;
+                }
+                if (this.length >= 2) {
+                    this.closeStatus = this.binaryPayload.readUInt16BE(0);
+                    this.binaryPayload = this.binaryPayload.slice(2);
+                }
+            }
+
+            this.parseState = COMPLETE;
+            return true;
+        }
+    }
+    return false;
+};
+
+WebSocketFrame.prototype.throwAwayPayload = function(bufferList) {
+    if (bufferList.length >= this.length) {
+        bufferList.advance(this.length);
+        this.parseState = COMPLETE;
+        return true;
+    }
+    return false;
+};
+
+WebSocketFrame.prototype.toBuffer = function(nullMask) {
+    var maskKey;
+    var headerLength = 2;
+    var data;
+    var outputPos;
+    var firstByte = 0x00;
+    var secondByte = 0x00;
+
+    if (this.fin) {
+        firstByte |= 0x80;
+    }
+    if (this.rsv1) {
+        firstByte |= 0x40;
+    }
+    if (this.rsv2) {
+        firstByte |= 0x20;
+    }
+    if (this.rsv3) {
+        firstByte |= 0x10;
+    }
+    if (this.mask) {
+        secondByte |= 0x80;
+    }
+
+    firstByte |= (this.opcode & 0x0F);
+
+    // the close frame is a special case because the close reason is
+    // prepended to the payload data.
+    if (this.opcode === 0x08) {
+        this.length = 2;
+        if (this.binaryPayload) {
+            this.length += this.binaryPayload.length;
+        }
+        data = bufferAllocUnsafe(this.length);
+        data.writeUInt16BE(this.closeStatus, 0);
+        if (this.length > 2) {
+            this.binaryPayload.copy(data, 2);
+        }
+    }
+    else if (this.binaryPayload) {
+        data = this.binaryPayload;
+        this.length = data.length;
+    }
+    else {
+        this.length = 0;
+    }
+
+    if (this.length <= 125) {
+        // encode the length directly into the two-byte frame header
+        secondByte |= (this.length & 0x7F);
+    }
+    else if (this.length > 125 && this.length <= 0xFFFF) {
+        // Use 16-bit length
+        secondByte |= 126;
+        headerLength += 2;
+    }
+    else if (this.length > 0xFFFF) {
+        // Use 64-bit length
+        secondByte |= 127;
+        headerLength += 8;
+    }
+
+    var output = bufferAllocUnsafe(this.length + headerLength + (this.mask ? 4 : 0));
+
+    // write the frame header
+    output[0] = firstByte;
+    output[1] = secondByte;
+
+    outputPos = 2;
+
+    if (this.length > 125 && this.length <= 0xFFFF) {
+        // write 16-bit length
+        output.writeUInt16BE(this.length, outputPos);
+        outputPos += 2;
+    }
+    else if (this.length > 0xFFFF) {
+        // write 64-bit length
+        output.writeUInt32BE(0x00000000, outputPos);
+        output.writeUInt32BE(this.length, outputPos + 4);
+        outputPos += 8;
+    }
+
+    if (this.mask) {
+        maskKey = nullMask ? 0 : ((Math.random() * 0xFFFFFFFF) >>> 0);
+        this.maskBytes.writeUInt32BE(maskKey, 0);
+
+        // write the mask key
+        this.maskBytes.copy(output, outputPos);
+        outputPos += 4;
+
+        if (data) {
+          bufferUtil.mask(data, this.maskBytes, output, outputPos, this.length);
+        }
+    }
+    else if (data) {
+        data.copy(output, outputPos);
+    }
+
+    return output;
+};
+
+WebSocketFrame.prototype.toString = function() {
+    return 'Opcode: ' + this.opcode + ', fin: ' + this.fin + ', length: ' + this.length + ', hasPayload: ' + Boolean(this.binaryPayload) + ', masked: ' + this.mask;
+};
+
+
+module.exports = WebSocketFrame;
+
+
+/***/ }),
+
+/***/ 2776:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/************************************************************************
+ *  Copyright 2010-2015 Brian McKelvey.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ***********************************************************************/
+
+var crypto = __webpack_require__(6113);
+var util = __webpack_require__(3837);
+var url = __webpack_require__(7310);
+var EventEmitter = (__webpack_require__(2361).EventEmitter);
+var WebSocketConnection = __webpack_require__(1836);
+
+var headerValueSplitRegExp = /,\s*/;
+var headerParamSplitRegExp = /;\s*/;
+var headerSanitizeRegExp = /[\r\n]/g;
+var xForwardedForSeparatorRegExp = /,\s*/;
+var separators = [
+    '(', ')', '<', '>', '@',
+    ',', ';', ':', '\\', '\"',
+    '/', '[', ']', '?', '=',
+    '{', '}', ' ', String.fromCharCode(9)
+];
+var controlChars = [String.fromCharCode(127) /* DEL */];
+for (var i=0; i < 31; i ++) {
+    /* US-ASCII Control Characters */
+    controlChars.push(String.fromCharCode(i));
+}
+
+var cookieNameValidateRegEx = /([\x00-\x20\x22\x28\x29\x2c\x2f\x3a-\x3f\x40\x5b-\x5e\x7b\x7d\x7f])/;
+var cookieValueValidateRegEx = /[^\x21\x23-\x2b\x2d-\x3a\x3c-\x5b\x5d-\x7e]/;
+var cookieValueDQuoteValidateRegEx = /^"[^"]*"$/;
+var controlCharsAndSemicolonRegEx = /[\x00-\x20\x3b]/g;
+
+var cookieSeparatorRegEx = /[;,] */;
+
+var httpStatusDescriptions = {
+    100: 'Continue',
+    101: 'Switching Protocols',
+    200: 'OK',
+    201: 'Created',
+    203: 'Non-Authoritative Information',
+    204: 'No Content',
+    205: 'Reset Content',
+    206: 'Partial Content',
+    300: 'Multiple Choices',
+    301: 'Moved Permanently',
+    302: 'Found',
+    303: 'See Other',
+    304: 'Not Modified',
+    305: 'Use Proxy',
+    307: 'Temporary Redirect',
+    400: 'Bad Request',
+    401: 'Unauthorized',
+    402: 'Payment Required',
+    403: 'Forbidden',
+    404: 'Not Found',
+    406: 'Not Acceptable',
+    407: 'Proxy Authorization Required',
+    408: 'Request Timeout',
+    409: 'Conflict',
+    410: 'Gone',
+    411: 'Length Required',
+    412: 'Precondition Failed',
+    413: 'Request Entity Too Long',
+    414: 'Request-URI Too Long',
+    415: 'Unsupported Media Type',
+    416: 'Requested Range Not Satisfiable',
+    417: 'Expectation Failed',
+    426: 'Upgrade Required',
+    500: 'Internal Server Error',
+    501: 'Not Implemented',
+    502: 'Bad Gateway',
+    503: 'Service Unavailable',
+    504: 'Gateway Timeout',
+    505: 'HTTP Version Not Supported'
+};
+
+function WebSocketRequest(socket, httpRequest, serverConfig) {
+    // Superclass Constructor
+    EventEmitter.call(this);
+
+    this.socket = socket;
+    this.httpRequest = httpRequest;
+    this.resource = httpRequest.url;
+    this.remoteAddress = socket.remoteAddress;
+    this.remoteAddresses = [this.remoteAddress];
+    this.serverConfig = serverConfig;
+
+    // Watch for the underlying TCP socket closing before we call accept
+    this._socketIsClosing = false;
+    this._socketCloseHandler = this._handleSocketCloseBeforeAccept.bind(this);
+    this.socket.on('end', this._socketCloseHandler);
+    this.socket.on('close', this._socketCloseHandler);
+
+    this._resolved = false;
+}
+
+util.inherits(WebSocketRequest, EventEmitter);
+
+WebSocketRequest.prototype.readHandshake = function() {
+    var self = this;
+    var request = this.httpRequest;
+
+    // Decode URL
+    this.resourceURL = url.parse(this.resource, true);
+
+    this.host = request.headers['host'];
+    if (!this.host) {
+        throw new Error('Client must provide a Host header.');
+    }
+
+    this.key = request.headers['sec-websocket-key'];
+    if (!this.key) {
+        throw new Error('Client must provide a value for Sec-WebSocket-Key.');
+    }
+
+    this.webSocketVersion = parseInt(request.headers['sec-websocket-version'], 10);
+
+    if (!this.webSocketVersion || isNaN(this.webSocketVersion)) {
+        throw new Error('Client must provide a value for Sec-WebSocket-Version.');
+    }
+
+    switch (this.webSocketVersion) {
+        case 8:
+        case 13:
+            break;
+        default:
+            var e = new Error('Unsupported websocket client version: ' + this.webSocketVersion +
+                              'Only versions 8 and 13 are supported.');
+            e.httpCode = 426;
+            e.headers = {
+                'Sec-WebSocket-Version': '13'
+            };
+            throw e;
+    }
+
+    if (this.webSocketVersion === 13) {
+        this.origin = request.headers['origin'];
+    }
+    else if (this.webSocketVersion === 8) {
+        this.origin = request.headers['sec-websocket-origin'];
+    }
+
+    // Protocol is optional.
+    var protocolString = request.headers['sec-websocket-protocol'];
+    this.protocolFullCaseMap = {};
+    this.requestedProtocols = [];
+    if (protocolString) {
+        var requestedProtocolsFullCase = protocolString.split(headerValueSplitRegExp);
+        requestedProtocolsFullCase.forEach(function(protocol) {
+            var lcProtocol = protocol.toLocaleLowerCase();
+            self.requestedProtocols.push(lcProtocol);
+            self.protocolFullCaseMap[lcProtocol] = protocol;
+        });
+    }
+
+    if (!this.serverConfig.ignoreXForwardedFor &&
+        request.headers['x-forwarded-for']) {
+        var immediatePeerIP = this.remoteAddress;
+        this.remoteAddresses = request.headers['x-forwarded-for']
+            .split(xForwardedForSeparatorRegExp);
+        this.remoteAddresses.push(immediatePeerIP);
+        this.remoteAddress = this.remoteAddresses[0];
+    }
+
+    // Extensions are optional.
+    if (this.serverConfig.parseExtensions) {
+        var extensionsString = request.headers['sec-websocket-extensions'];
+        this.requestedExtensions = this.parseExtensions(extensionsString);
+    } else {
+        this.requestedExtensions = [];
+    }
+
+    // Cookies are optional
+    if (this.serverConfig.parseCookies) {
+        var cookieString = request.headers['cookie'];
+        this.cookies = this.parseCookies(cookieString);
+    } else {
+        this.cookies = [];
+    }
+};
+
+WebSocketRequest.prototype.parseExtensions = function(extensionsString) {
+    if (!extensionsString || extensionsString.length === 0) {
+        return [];
+    }
+    var extensions = extensionsString.toLocaleLowerCase().split(headerValueSplitRegExp);
+    extensions.forEach(function(extension, index, array) {
+        var params = extension.split(headerParamSplitRegExp);
+        var extensionName = params[0];
+        var extensionParams = params.slice(1);
+        extensionParams.forEach(function(rawParam, index, array) {
+            var arr = rawParam.split('=');
+            var obj = {
+                name: arr[0],
+                value: arr[1]
+            };
+            array.splice(index, 1, obj);
+        });
+        var obj = {
+            name: extensionName,
+            params: extensionParams
+        };
+        array.splice(index, 1, obj);
+    });
+    return extensions;
+};
+
+// This function adapted from node-cookie
+// https://github.com/shtylman/node-cookie
+WebSocketRequest.prototype.parseCookies = function(str) {
+    // Sanity Check
+    if (!str || typeof(str) !== 'string') {
+        return [];
+    }
+
+    var cookies = [];
+    var pairs = str.split(cookieSeparatorRegEx);
+
+    pairs.forEach(function(pair) {
+        var eq_idx = pair.indexOf('=');
+        if (eq_idx === -1) {
+            cookies.push({
+                name: pair,
+                value: null
+            });
+            return;
+        }
+
+        var key = pair.substr(0, eq_idx).trim();
+        var val = pair.substr(++eq_idx, pair.length).trim();
+
+        // quoted values
+        if ('"' === val[0]) {
+            val = val.slice(1, -1);
+        }
+
+        cookies.push({
+            name: key,
+            value: decodeURIComponent(val)
+        });
+    });
+
+    return cookies;
+};
+
+WebSocketRequest.prototype.accept = function(acceptedProtocol, allowedOrigin, cookies) {
+    this._verifyResolution();
+
+    // TODO: Handle extensions
+
+    var protocolFullCase;
+
+    if (acceptedProtocol) {
+        protocolFullCase = this.protocolFullCaseMap[acceptedProtocol.toLocaleLowerCase()];
+        if (typeof(protocolFullCase) === 'undefined') {
+            protocolFullCase = acceptedProtocol;
+        }
+    }
+    else {
+        protocolFullCase = acceptedProtocol;
+    }
+    this.protocolFullCaseMap = null;
+
+    // Create key validation hash
+    var sha1 = crypto.createHash('sha1');
+    sha1.update(this.key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11');
+    var acceptKey = sha1.digest('base64');
+
+    var response = 'HTTP/1.1 101 Switching Protocols\r\n' +
+                   'Upgrade: websocket\r\n' +
+                   'Connection: Upgrade\r\n' +
+                   'Sec-WebSocket-Accept: ' + acceptKey + '\r\n';
+
+    if (protocolFullCase) {
+        // validate protocol
+        for (var i=0; i < protocolFullCase.length; i++) {
+            var charCode = protocolFullCase.charCodeAt(i);
+            var character = protocolFullCase.charAt(i);
+            if (charCode < 0x21 || charCode > 0x7E || separators.indexOf(character) !== -1) {
+                this.reject(500);
+                throw new Error('Illegal character "' + String.fromCharCode(character) + '" in subprotocol.');
+            }
+        }
+        if (this.requestedProtocols.indexOf(acceptedProtocol) === -1) {
+            this.reject(500);
+            throw new Error('Specified protocol was not requested by the client.');
+        }
+
+        protocolFullCase = protocolFullCase.replace(headerSanitizeRegExp, '');
+        response += 'Sec-WebSocket-Protocol: ' + protocolFullCase + '\r\n';
+    }
+    this.requestedProtocols = null;
+
+    if (allowedOrigin) {
+        allowedOrigin = allowedOrigin.replace(headerSanitizeRegExp, '');
+        if (this.webSocketVersion === 13) {
+            response += 'Origin: ' + allowedOrigin + '\r\n';
+        }
+        else if (this.webSocketVersion === 8) {
+            response += 'Sec-WebSocket-Origin: ' + allowedOrigin + '\r\n';
+        }
+    }
+
+    if (cookies) {
+        if (!Array.isArray(cookies)) {
+            this.reject(500);
+            throw new Error('Value supplied for "cookies" argument must be an array.');
+        }
+        var seenCookies = {};
+        cookies.forEach(function(cookie) {
+            if (!cookie.name || !cookie.value) {
+                this.reject(500);
+                throw new Error('Each cookie to set must at least provide a "name" and "value"');
+            }
+
+            // Make sure there are no \r\n sequences inserted
+            cookie.name = cookie.name.replace(controlCharsAndSemicolonRegEx, '');
+            cookie.value = cookie.value.replace(controlCharsAndSemicolonRegEx, '');
+
+            if (seenCookies[cookie.name]) {
+                this.reject(500);
+                throw new Error('You may not specify the same cookie name twice.');
+            }
+            seenCookies[cookie.name] = true;
+
+            // token (RFC 2616, Section 2.2)
+            var invalidChar = cookie.name.match(cookieNameValidateRegEx);
+            if (invalidChar) {
+                this.reject(500);
+                throw new Error('Illegal character ' + invalidChar[0] + ' in cookie name');
+            }
+
+            // RFC 6265, Section 4.1.1
+            // *cookie-octet / ( DQUOTE *cookie-octet DQUOTE ) | %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
+            if (cookie.value.match(cookieValueDQuoteValidateRegEx)) {
+                invalidChar = cookie.value.slice(1, -1).match(cookieValueValidateRegEx);
+            } else {
+                invalidChar = cookie.value.match(cookieValueValidateRegEx);
+            }
+            if (invalidChar) {
+                this.reject(500);
+                throw new Error('Illegal character ' + invalidChar[0] + ' in cookie value');
+            }
+
+            var cookieParts = [cookie.name + '=' + cookie.value];
+
+            // RFC 6265, Section 4.1.1
+            // 'Path=' path-value | <any CHAR except CTLs or ';'>
+            if(cookie.path){
+                invalidChar = cookie.path.match(controlCharsAndSemicolonRegEx);
+                if (invalidChar) {
+                    this.reject(500);
+                    throw new Error('Illegal character ' + invalidChar[0] + ' in cookie path');
+                }
+                cookieParts.push('Path=' + cookie.path);
+            }
+
+            // RFC 6265, Section 4.1.2.3
+            // 'Domain=' subdomain
+            if (cookie.domain) {
+                if (typeof(cookie.domain) !== 'string') {
+                    this.reject(500);
+                    throw new Error('Domain must be specified and must be a string.');
+                }
+                invalidChar = cookie.domain.match(controlCharsAndSemicolonRegEx);
+                if (invalidChar) {
+                    this.reject(500);
+                    throw new Error('Illegal character ' + invalidChar[0] + ' in cookie domain');
+                }
+                cookieParts.push('Domain=' + cookie.domain.toLowerCase());
+            }
+
+            // RFC 6265, Section 4.1.1
+            //'Expires=' sane-cookie-date | Force Date object requirement by using only epoch
+            if (cookie.expires) {
+                if (!(cookie.expires instanceof Date)){
+                    this.reject(500);
+                    throw new Error('Value supplied for cookie "expires" must be a vaild date object');
+                }
+                cookieParts.push('Expires=' + cookie.expires.toGMTString());
+            }
+
+            // RFC 6265, Section 4.1.1
+            //'Max-Age=' non-zero-digit *DIGIT
+            if (cookie.maxage) {
+                var maxage = cookie.maxage;
+                if (typeof(maxage) === 'string') {
+                    maxage = parseInt(maxage, 10);
+                }
+                if (isNaN(maxage) || maxage <= 0 ) {
+                    this.reject(500);
+                    throw new Error('Value supplied for cookie "maxage" must be a non-zero number');
+                }
+                maxage = Math.round(maxage);
+                cookieParts.push('Max-Age=' + maxage.toString(10));
+            }
+
+            // RFC 6265, Section 4.1.1
+            //'Secure;'
+            if (cookie.secure) {
+                if (typeof(cookie.secure) !== 'boolean') {
+                    this.reject(500);
+                    throw new Error('Value supplied for cookie "secure" must be of type boolean');
+                }
+                cookieParts.push('Secure');
+            }
+
+            // RFC 6265, Section 4.1.1
+            //'HttpOnly;'
+            if (cookie.httponly) {
+                if (typeof(cookie.httponly) !== 'boolean') {
+                    this.reject(500);
+                    throw new Error('Value supplied for cookie "httponly" must be of type boolean');
+                }
+                cookieParts.push('HttpOnly');
+            }
+
+            response += ('Set-Cookie: ' + cookieParts.join(';') + '\r\n');
+        }.bind(this));
+    }
+
+    // TODO: handle negotiated extensions
+    // if (negotiatedExtensions) {
+    //     response += 'Sec-WebSocket-Extensions: ' + negotiatedExtensions.join(', ') + '\r\n';
+    // }
+
+    // Mark the request resolved now so that the user can't call accept or
+    // reject a second time.
+    this._resolved = true;
+    this.emit('requestResolved', this);
+
+    response += '\r\n';
+
+    var connection = new WebSocketConnection(this.socket, [], acceptedProtocol, false, this.serverConfig);
+    connection.webSocketVersion = this.webSocketVersion;
+    connection.remoteAddress = this.remoteAddress;
+    connection.remoteAddresses = this.remoteAddresses;
+
+    var self = this;
+
+    if (this._socketIsClosing) {
+        // Handle case when the client hangs up before we get a chance to
+        // accept the connection and send our side of the opening handshake.
+        cleanupFailedConnection(connection);
+    }
+    else {
+        this.socket.write(response, 'ascii', function(error) {
+            if (error) {
+                cleanupFailedConnection(connection);
+                return;
+            }
+
+            self._removeSocketCloseListeners();
+            connection._addSocketEventListeners();
+        });
+    }
+
+    this.emit('requestAccepted', connection);
+    return connection;
+};
+
+WebSocketRequest.prototype.reject = function(status, reason, extraHeaders) {
+    this._verifyResolution();
+
+    // Mark the request resolved now so that the user can't call accept or
+    // reject a second time.
+    this._resolved = true;
+    this.emit('requestResolved', this);
+
+    if (typeof(status) !== 'number') {
+        status = 403;
+    }
+    var response = 'HTTP/1.1 ' + status + ' ' + httpStatusDescriptions[status] + '\r\n' +
+                   'Connection: close\r\n';
+    if (reason) {
+        reason = reason.replace(headerSanitizeRegExp, '');
+        response += 'X-WebSocket-Reject-Reason: ' + reason + '\r\n';
+    }
+
+    if (extraHeaders) {
+        for (var key in extraHeaders) {
+            var sanitizedValue = extraHeaders[key].toString().replace(headerSanitizeRegExp, '');
+            var sanitizedKey = key.replace(headerSanitizeRegExp, '');
+            response += (sanitizedKey + ': ' + sanitizedValue + '\r\n');
+        }
+    }
+
+    response += '\r\n';
+    this.socket.end(response, 'ascii');
+
+    this.emit('requestRejected', this);
+};
+
+WebSocketRequest.prototype._handleSocketCloseBeforeAccept = function() {
+    this._socketIsClosing = true;
+    this._removeSocketCloseListeners();
+};
+
+WebSocketRequest.prototype._removeSocketCloseListeners = function() {
+    this.socket.removeListener('end', this._socketCloseHandler);
+    this.socket.removeListener('close', this._socketCloseHandler);
+};
+
+WebSocketRequest.prototype._verifyResolution = function() {
+    if (this._resolved) {
+        throw new Error('WebSocketRequest may only be accepted or rejected one time.');
+    }
+};
+
+function cleanupFailedConnection(connection) {
+    // Since we have to return a connection object even if the socket is
+    // already dead in order not to break the API, we schedule a 'close'
+    // event on the connection object to occur immediately.
+    process.nextTick(function() {
+        // WebSocketConnection.CLOSE_REASON_ABNORMAL = 1006
+        // Third param: Skip sending the close frame to a dead socket
+        connection.drop(1006, 'TCP connection lost before handshake completed.', true);
+    });
+}
+
+module.exports = WebSocketRequest;
+
+
+/***/ }),
+
+/***/ 8529:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/************************************************************************
+ *  Copyright 2010-2015 Brian McKelvey.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ***********************************************************************/
+
+var extend = (__webpack_require__(4636).extend);
+var util = __webpack_require__(3837);
+var EventEmitter = (__webpack_require__(2361).EventEmitter);
+var WebSocketRouterRequest = __webpack_require__(3404);
+
+function WebSocketRouter(config) {
+    // Superclass Constructor
+    EventEmitter.call(this);
+
+    this.config = {
+        // The WebSocketServer instance to attach to.
+        server: null
+    };
+    if (config) {
+        extend(this.config, config);
+    }
+    this.handlers = [];
+
+    this._requestHandler = this.handleRequest.bind(this);
+    if (this.config.server) {
+        this.attachServer(this.config.server);
+    }
+}
+
+util.inherits(WebSocketRouter, EventEmitter);
+
+WebSocketRouter.prototype.attachServer = function(server) {
+    if (server) {
+        this.server = server;
+        this.server.on('request', this._requestHandler);
+    }
+    else {
+        throw new Error('You must specify a WebSocketServer instance to attach to.');
+    }
+};
+
+WebSocketRouter.prototype.detachServer = function() {
+    if (this.server) {
+        this.server.removeListener('request', this._requestHandler);
+        this.server = null;
+    }
+    else {
+        throw new Error('Cannot detach from server: not attached.');
+    }
+};
+
+WebSocketRouter.prototype.mount = function(path, protocol, callback) {
+    if (!path) {
+        throw new Error('You must specify a path for this handler.');
+    }
+    if (!protocol) {
+        protocol = '____no_protocol____';
+    }
+    if (!callback) {
+        throw new Error('You must specify a callback for this handler.');
+    }
+
+    path = this.pathToRegExp(path);
+    if (!(path instanceof RegExp)) {
+        throw new Error('Path must be specified as either a string or a RegExp.');
+    }
+    var pathString = path.toString();
+
+    // normalize protocol to lower-case
+    protocol = protocol.toLocaleLowerCase();
+
+    if (this.findHandlerIndex(pathString, protocol) !== -1) {
+        throw new Error('You may only mount one handler per path/protocol combination.');
+    }
+
+    this.handlers.push({
+        'path': path,
+        'pathString': pathString,
+        'protocol': protocol,
+        'callback': callback
+    });
+};
+WebSocketRouter.prototype.unmount = function(path, protocol) {
+    var index = this.findHandlerIndex(this.pathToRegExp(path).toString(), protocol);
+    if (index !== -1) {
+        this.handlers.splice(index, 1);
+    }
+    else {
+        throw new Error('Unable to find a route matching the specified path and protocol.');
+    }
+};
+
+WebSocketRouter.prototype.findHandlerIndex = function(pathString, protocol) {
+    protocol = protocol.toLocaleLowerCase();
+    for (var i=0, len=this.handlers.length; i < len; i++) {
+        var handler = this.handlers[i];
+        if (handler.pathString === pathString && handler.protocol === protocol) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+WebSocketRouter.prototype.pathToRegExp = function(path) {
+    if (typeof(path) === 'string') {
+        if (path === '*') {
+            path = /^.*$/;
+        }
+        else {
+            path = path.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+            path = new RegExp('^' + path + '$');
+        }
+    }
+    return path;
+};
+
+WebSocketRouter.prototype.handleRequest = function(request) {
+    var requestedProtocols = request.requestedProtocols;
+    if (requestedProtocols.length === 0) {
+        requestedProtocols = ['____no_protocol____'];
+    }
+
+    // Find a handler with the first requested protocol first
+    for (var i=0; i < requestedProtocols.length; i++) {
+        var requestedProtocol = requestedProtocols[i].toLocaleLowerCase();
+
+        // find the first handler that can process this request
+        for (var j=0, len=this.handlers.length; j < len; j++) {
+            var handler = this.handlers[j];
+            if (handler.path.test(request.resourceURL.pathname)) {
+                if (requestedProtocol === handler.protocol ||
+                    handler.protocol === '*')
+                {
+                    var routerRequest = new WebSocketRouterRequest(request, requestedProtocol);
+                    handler.callback(routerRequest);
+                    return;
+                }
+            }
+        }
+    }
+
+    // If we get here we were unable to find a suitable handler.
+    request.reject(404, 'No handler is available for the given request.');
+};
+
+module.exports = WebSocketRouter;
+
+
+/***/ }),
+
+/***/ 3404:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/************************************************************************
+ *  Copyright 2010-2015 Brian McKelvey.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ***********************************************************************/
+
+var util = __webpack_require__(3837);
+var EventEmitter = (__webpack_require__(2361).EventEmitter);
+
+function WebSocketRouterRequest(webSocketRequest, resolvedProtocol) {
+    // Superclass Constructor
+    EventEmitter.call(this);
+
+    this.webSocketRequest = webSocketRequest;
+    if (resolvedProtocol === '____no_protocol____') {
+        this.protocol = null;
+    }
+    else {
+        this.protocol = resolvedProtocol;
+    }
+    this.origin = webSocketRequest.origin;
+    this.resource = webSocketRequest.resource;
+    this.resourceURL = webSocketRequest.resourceURL;
+    this.httpRequest = webSocketRequest.httpRequest;
+    this.remoteAddress = webSocketRequest.remoteAddress;
+    this.webSocketVersion = webSocketRequest.webSocketVersion;
+    this.requestedExtensions = webSocketRequest.requestedExtensions;
+    this.cookies = webSocketRequest.cookies;
+}
+
+util.inherits(WebSocketRouterRequest, EventEmitter);
+
+WebSocketRouterRequest.prototype.accept = function(origin, cookies) {
+    var connection = this.webSocketRequest.accept(this.protocol, origin, cookies);
+    this.emit('requestAccepted', connection);
+    return connection;
+};
+
+WebSocketRouterRequest.prototype.reject = function(status, reason, extraHeaders) {
+    this.webSocketRequest.reject(status, reason, extraHeaders);
+    this.emit('requestRejected', this);
+};
+
+module.exports = WebSocketRouterRequest;
+
+
+/***/ }),
+
+/***/ 1051:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/************************************************************************
+ *  Copyright 2010-2015 Brian McKelvey.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ***********************************************************************/
+
+var extend = (__webpack_require__(4636).extend);
+var utils = __webpack_require__(4636);
+var util = __webpack_require__(3837);
+var debug = __webpack_require__(6565)('websocket:server');
+var EventEmitter = (__webpack_require__(2361).EventEmitter);
+var WebSocketRequest = __webpack_require__(2776);
+
+var WebSocketServer = function WebSocketServer(config) {
+    // Superclass Constructor
+    EventEmitter.call(this);
+
+    this._handlers = {
+        upgrade: this.handleUpgrade.bind(this),
+        requestAccepted: this.handleRequestAccepted.bind(this),
+        requestResolved: this.handleRequestResolved.bind(this)
+    };
+    this.connections = [];
+    this.pendingRequests = [];
+    if (config) {
+        this.mount(config);
+    }
+};
+
+util.inherits(WebSocketServer, EventEmitter);
+
+WebSocketServer.prototype.mount = function(config) {
+    this.config = {
+        // The http server instance to attach to.  Required.
+        httpServer: null,
+
+        // 64KiB max frame size.
+        maxReceivedFrameSize: 0x10000,
+
+        // 1MiB max message size, only applicable if
+        // assembleFragments is true
+        maxReceivedMessageSize: 0x100000,
+
+        // Outgoing messages larger than fragmentationThreshold will be
+        // split into multiple fragments.
+        fragmentOutgoingMessages: true,
+
+        // Outgoing frames are fragmented if they exceed this threshold.
+        // Default is 16KiB
+        fragmentationThreshold: 0x4000,
+
+        // If true, the server will automatically send a ping to all
+        // clients every 'keepaliveInterval' milliseconds.  The timer is
+        // reset on any received data from the client.
+        keepalive: true,
+
+        // The interval to send keepalive pings to connected clients if the
+        // connection is idle.  Any received data will reset the counter.
+        keepaliveInterval: 20000,
+
+        // If true, the server will consider any connection that has not
+        // received any data within the amount of time specified by
+        // 'keepaliveGracePeriod' after a keepalive ping has been sent to
+        // be dead, and will drop the connection.
+        // Ignored if keepalive is false.
+        dropConnectionOnKeepaliveTimeout: true,
+
+        // The amount of time to wait after sending a keepalive ping before
+        // closing the connection if the connected peer does not respond.
+        // Ignored if keepalive is false.
+        keepaliveGracePeriod: 10000,
+
+        // Whether to use native TCP keep-alive instead of WebSockets ping
+        // and pong packets.  Native TCP keep-alive sends smaller packets
+        // on the wire and so uses bandwidth more efficiently.  This may
+        // be more important when talking to mobile devices.
+        // If this value is set to true, then these values will be ignored:
+        //   keepaliveGracePeriod
+        //   dropConnectionOnKeepaliveTimeout
+        useNativeKeepalive: false,
+
+        // If true, fragmented messages will be automatically assembled
+        // and the full message will be emitted via a 'message' event.
+        // If false, each frame will be emitted via a 'frame' event and
+        // the application will be responsible for aggregating multiple
+        // fragmented frames.  Single-frame messages will emit a 'message'
+        // event in addition to the 'frame' event.
+        // Most users will want to leave this set to 'true'
+        assembleFragments: true,
+
+        // If this is true, websocket connections will be accepted
+        // regardless of the path and protocol specified by the client.
+        // The protocol accepted will be the first that was requested
+        // by the client.  Clients from any origin will be accepted.
+        // This should only be used in the simplest of cases.  You should
+        // probably leave this set to 'false' and inspect the request
+        // object to make sure it's acceptable before accepting it.
+        autoAcceptConnections: false,
+
+        // Whether or not the X-Forwarded-For header should be respected.
+        // It's important to set this to 'true' when accepting connections
+        // from untrusted clients, as a malicious client could spoof its
+        // IP address by simply setting this header.  It's meant to be added
+        // by a trusted proxy or other intermediary within your own
+        // infrastructure.
+        // See:  http://en.wikipedia.org/wiki/X-Forwarded-For
+        ignoreXForwardedFor: false,
+
+        // If this is true, 'cookie' headers are parsed and exposed as WebSocketRequest.cookies
+        parseCookies: true,
+
+        // If this is true, 'sec-websocket-extensions' headers are parsed and exposed as WebSocketRequest.requestedExtensions
+        parseExtensions: true,
+
+        // The Nagle Algorithm makes more efficient use of network resources
+        // by introducing a small delay before sending small packets so that
+        // multiple messages can be batched together before going onto the
+        // wire.  This however comes at the cost of latency, so the default
+        // is to disable it.  If you don't need low latency and are streaming
+        // lots of small messages, you can change this to 'false'
+        disableNagleAlgorithm: true,
+
+        // The number of milliseconds to wait after sending a close frame
+        // for an acknowledgement to come back before giving up and just
+        // closing the socket.
+        closeTimeout: 5000
+    };
+    extend(this.config, config);
+
+    if (this.config.httpServer) {
+        if (!Array.isArray(this.config.httpServer)) {
+            this.config.httpServer = [this.config.httpServer];
+        }
+        var upgradeHandler = this._handlers.upgrade;
+        this.config.httpServer.forEach(function(httpServer) {
+            httpServer.on('upgrade', upgradeHandler);
+        });
+    }
+    else {
+        throw new Error('You must specify an httpServer on which to mount the WebSocket server.');
+    }
+};
+
+WebSocketServer.prototype.unmount = function() {
+    var upgradeHandler = this._handlers.upgrade;
+    this.config.httpServer.forEach(function(httpServer) {
+        httpServer.removeListener('upgrade', upgradeHandler);
+    });
+};
+
+WebSocketServer.prototype.closeAllConnections = function() {
+    this.connections.forEach(function(connection) {
+        connection.close();
+    });
+    this.pendingRequests.forEach(function(request) {
+        process.nextTick(function() {
+          request.reject(503); // HTTP 503 Service Unavailable
+        });
+    });
+};
+
+WebSocketServer.prototype.broadcast = function(data) {
+    if (Buffer.isBuffer(data)) {
+        this.broadcastBytes(data);
+    }
+    else if (typeof(data.toString) === 'function') {
+        this.broadcastUTF(data);
+    }
+};
+
+WebSocketServer.prototype.broadcastUTF = function(utfData) {
+    this.connections.forEach(function(connection) {
+        connection.sendUTF(utfData);
+    });
+};
+
+WebSocketServer.prototype.broadcastBytes = function(binaryData) {
+    this.connections.forEach(function(connection) {
+        connection.sendBytes(binaryData);
+    });
+};
+
+WebSocketServer.prototype.shutDown = function() {
+    this.unmount();
+    this.closeAllConnections();
+};
+
+WebSocketServer.prototype.handleUpgrade = function(request, socket) {
+    var self = this;
+    var wsRequest = new WebSocketRequest(socket, request, this.config);
+    try {
+        wsRequest.readHandshake();
+    }
+    catch(e) {
+        wsRequest.reject(
+            e.httpCode ? e.httpCode : 400,
+            e.message,
+            e.headers
+        );
+        debug('Invalid handshake: %s', e.message);
+        this.emit('upgradeError', e);
+        return;
+    }
+
+    this.pendingRequests.push(wsRequest);
+
+    wsRequest.once('requestAccepted', this._handlers.requestAccepted);
+    wsRequest.once('requestResolved', this._handlers.requestResolved);
+    socket.once('close', function () {
+        self._handlers.requestResolved(wsRequest);
+    });
+
+    if (!this.config.autoAcceptConnections && utils.eventEmitterListenerCount(this, 'request') > 0) {
+        this.emit('request', wsRequest);
+    }
+    else if (this.config.autoAcceptConnections) {
+        wsRequest.accept(wsRequest.requestedProtocols[0], wsRequest.origin);
+    }
+    else {
+        wsRequest.reject(404, 'No handler is configured to accept the connection.');
+    }
+};
+
+WebSocketServer.prototype.handleRequestAccepted = function(connection) {
+    var self = this;
+    connection.once('close', function(closeReason, description) {
+        self.handleConnectionClose(connection, closeReason, description);
+    });
+    this.connections.push(connection);
+    this.emit('connect', connection);
+};
+
+WebSocketServer.prototype.handleConnectionClose = function(connection, closeReason, description) {
+    var index = this.connections.indexOf(connection);
+    if (index !== -1) {
+        this.connections.splice(index, 1);
+    }
+    this.emit('close', connection, closeReason, description);
+};
+
+WebSocketServer.prototype.handleRequestResolved = function(request) {
+    var index = this.pendingRequests.indexOf(request);
+    if (index !== -1) { this.pendingRequests.splice(index, 1); }
+};
+
+module.exports = WebSocketServer;
+
+
+/***/ }),
+
+/***/ 4636:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+var noop = exports.noop = function(){};
+
+exports.extend = function extend(dest, source) {
+    for (var prop in source) {
+        dest[prop] = source[prop];
+    }
+};
+
+exports.eventEmitterListenerCount =
+    (__webpack_require__(2361).EventEmitter.listenerCount) ||
+    function(emitter, type) { return emitter.listeners(type).length; };
+
+exports.bufferAllocUnsafe = Buffer.allocUnsafe ?
+    Buffer.allocUnsafe :
+    function oldBufferAllocUnsafe(size) { return new Buffer(size); };
+
+exports.bufferFromString = Buffer.from ?
+    Buffer.from :
+    function oldBufferFromString(string, encoding) {
+      return new Buffer(string, encoding);
+    };
+
+exports.BufferingLogger = function createBufferingLogger(identifier, uniqueID) {
+    var logFunction = __webpack_require__(6565)(identifier);
+    if (logFunction.enabled) {
+        var logger = new BufferingLogger(identifier, uniqueID, logFunction);
+        var debug = logger.log.bind(logger);
+        debug.printOutput = logger.printOutput.bind(logger);
+        debug.enabled = logFunction.enabled;
+        return debug;
+    }
+    logFunction.printOutput = noop;
+    return logFunction;
+};
+
+function BufferingLogger(identifier, uniqueID, logFunction) {
+    this.logFunction = logFunction;
+    this.identifier = identifier;
+    this.uniqueID = uniqueID;
+    this.buffer = [];
+}
+
+BufferingLogger.prototype.log = function() {
+  this.buffer.push([ new Date(), Array.prototype.slice.call(arguments) ]);
+  return this;
+};
+
+BufferingLogger.prototype.clear = function() {
+  this.buffer = [];
+  return this;
+};
+
+BufferingLogger.prototype.printOutput = function(logFunction) {
+    if (!logFunction) { logFunction = this.logFunction; }
+    var uniqueID = this.uniqueID;
+    this.buffer.forEach(function(entry) {
+        var date = entry[0].toLocaleString();
+        var args = entry[1].slice();
+        var formatString = args[0];
+        if (formatString !== (void 0) && formatString !== null) {
+            formatString = '%s - %s - ' + formatString.toString();
+            args.splice(0, 1, formatString, date, uniqueID);
+            logFunction.apply(global, args);
+        }
+    });
+};
+
+
+/***/ }),
+
+/***/ 9387:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+module.exports = __webpack_require__(9794).version;
+
+
+/***/ }),
+
+/***/ 8287:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+module.exports = {
+    'server'       : __webpack_require__(1051),
+    'client'       : __webpack_require__(6749),
+    'router'       : __webpack_require__(8529),
+    'frame'        : __webpack_require__(9650),
+    'request'      : __webpack_require__(2776),
+    'connection'   : __webpack_require__(1836),
+    'w3cwebsocket' : __webpack_require__(4864),
+    'deprecation'  : __webpack_require__(1197),
+    'version'      : __webpack_require__(9387)
+};
+
+
+/***/ }),
+
+/***/ 6237:
+/***/ ((module, exports, __webpack_require__) => {
+
+/**
+ * This is the web browser implementation of `debug()`.
+ *
+ * Expose `debug()` as the module.
+ */
+
+exports = module.exports = __webpack_require__(7105);
+exports.log = log;
+exports.formatArgs = formatArgs;
+exports.save = save;
+exports.load = load;
+exports.useColors = useColors;
+exports.storage = 'undefined' != typeof chrome
+               && 'undefined' != typeof chrome.storage
+                  ? chrome.storage.local
+                  : localstorage();
+
+/**
+ * Colors.
+ */
+
+exports.colors = [
+  'lightseagreen',
+  'forestgreen',
+  'goldenrod',
+  'dodgerblue',
+  'darkorchid',
+  'crimson'
+];
+
+/**
+ * Currently only WebKit-based Web Inspectors, Firefox >= v31,
+ * and the Firebug extension (any Firefox version) are known
+ * to support "%c" CSS customizations.
+ *
+ * TODO: add a `localStorage` variable to explicitly enable/disable colors
+ */
+
+function useColors() {
+  // NB: In an Electron preload script, document will be defined but not fully
+  // initialized. Since we know we're in Chrome, we'll just detect this case
+  // explicitly
+  if (typeof window !== 'undefined' && window.process && window.process.type === 'renderer') {
+    return true;
+  }
+
+  // is webkit? http://stackoverflow.com/a/16459606/376773
+  // document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
+  return (typeof document !== 'undefined' && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance) ||
+    // is firebug? http://stackoverflow.com/a/398120/376773
+    (typeof window !== 'undefined' && window.console && (window.console.firebug || (window.console.exception && window.console.table))) ||
+    // is firefox >= v31?
+    // https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
+    (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31) ||
+    // double check webkit in userAgent just in case we are in a worker
+    (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/));
+}
+
+/**
+ * Map %j to `JSON.stringify()`, since no Web Inspectors do that by default.
+ */
+
+exports.formatters.j = function(v) {
+  try {
+    return JSON.stringify(v);
+  } catch (err) {
+    return '[UnexpectedJSONParseError]: ' + err.message;
+  }
+};
+
+
+/**
+ * Colorize log arguments if enabled.
+ *
+ * @api public
+ */
+
+function formatArgs(args) {
+  var useColors = this.useColors;
+
+  args[0] = (useColors ? '%c' : '')
+    + this.namespace
+    + (useColors ? ' %c' : ' ')
+    + args[0]
+    + (useColors ? '%c ' : ' ')
+    + '+' + exports.humanize(this.diff);
+
+  if (!useColors) return;
+
+  var c = 'color: ' + this.color;
+  args.splice(1, 0, c, 'color: inherit')
+
+  // the final "%c" is somewhat tricky, because there could be other
+  // arguments passed either before or after the %c, so we need to
+  // figure out the correct index to insert the CSS into
+  var index = 0;
+  var lastC = 0;
+  args[0].replace(/%[a-zA-Z%]/g, function(match) {
+    if ('%%' === match) return;
+    index++;
+    if ('%c' === match) {
+      // we only are interested in the *last* %c
+      // (the user may have provided their own)
+      lastC = index;
+    }
+  });
+
+  args.splice(lastC, 0, c);
+}
+
+/**
+ * Invokes `console.log()` when available.
+ * No-op when `console.log` is not a "function".
+ *
+ * @api public
+ */
+
+function log() {
+  // this hackery is required for IE8/9, where
+  // the `console.log` function doesn't have 'apply'
+  return 'object' === typeof console
+    && console.log
+    && Function.prototype.apply.call(console.log, console, arguments);
+}
+
+/**
+ * Save `namespaces`.
+ *
+ * @param {String} namespaces
+ * @api private
+ */
+
+function save(namespaces) {
+  try {
+    if (null == namespaces) {
+      exports.storage.removeItem('debug');
+    } else {
+      exports.storage.debug = namespaces;
+    }
+  } catch(e) {}
+}
+
+/**
+ * Load `namespaces`.
+ *
+ * @return {String} returns the previously persisted debug modes
+ * @api private
+ */
+
+function load() {
+  var r;
+  try {
+    r = exports.storage.debug;
+  } catch(e) {}
+
+  // If debug isn't set in LS, and we're in Electron, try to load $DEBUG
+  if (!r && typeof process !== 'undefined' && 'env' in process) {
+    r = ({}).DEBUG;
+  }
+
+  return r;
+}
+
+/**
+ * Enable namespaces listed in `localStorage.debug` initially.
+ */
+
+exports.enable(load());
+
+/**
+ * Localstorage attempts to return the localstorage.
+ *
+ * This is necessary because safari throws
+ * when a user disables cookies/localstorage
+ * and you attempt to access it.
+ *
+ * @return {LocalStorage}
+ * @api private
+ */
+
+function localstorage() {
+  try {
+    return window.localStorage;
+  } catch (e) {}
+}
+
+
+/***/ }),
+
+/***/ 7105:
+/***/ ((module, exports, __webpack_require__) => {
+
+
+/**
+ * This is the common logic for both the Node.js and web browser
+ * implementations of `debug()`.
+ *
+ * Expose `debug()` as the module.
+ */
+
+exports = module.exports = createDebug.debug = createDebug['default'] = createDebug;
+exports.coerce = coerce;
+exports.disable = disable;
+exports.enable = enable;
+exports.enabled = enabled;
+exports.humanize = __webpack_require__(5079);
+
+/**
+ * The currently active debug mode names, and names to skip.
+ */
+
+exports.names = [];
+exports.skips = [];
+
+/**
+ * Map of special "%n" handling functions, for the debug "format" argument.
+ *
+ * Valid key names are a single, lower or upper-case letter, i.e. "n" and "N".
+ */
+
+exports.formatters = {};
+
+/**
+ * Previous log timestamp.
+ */
+
+var prevTime;
+
+/**
+ * Select a color.
+ * @param {String} namespace
+ * @return {Number}
+ * @api private
+ */
+
+function selectColor(namespace) {
+  var hash = 0, i;
+
+  for (i in namespace) {
+    hash  = ((hash << 5) - hash) + namespace.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+
+  return exports.colors[Math.abs(hash) % exports.colors.length];
+}
+
+/**
+ * Create a debugger with the given `namespace`.
+ *
+ * @param {String} namespace
+ * @return {Function}
+ * @api public
+ */
+
+function createDebug(namespace) {
+
+  function debug() {
+    // disabled?
+    if (!debug.enabled) return;
+
+    var self = debug;
+
+    // set `diff` timestamp
+    var curr = +new Date();
+    var ms = curr - (prevTime || curr);
+    self.diff = ms;
+    self.prev = prevTime;
+    self.curr = curr;
+    prevTime = curr;
+
+    // turn the `arguments` into a proper Array
+    var args = new Array(arguments.length);
+    for (var i = 0; i < args.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    args[0] = exports.coerce(args[0]);
+
+    if ('string' !== typeof args[0]) {
+      // anything else let's inspect with %O
+      args.unshift('%O');
+    }
+
+    // apply any `formatters` transformations
+    var index = 0;
+    args[0] = args[0].replace(/%([a-zA-Z%])/g, function(match, format) {
+      // if we encounter an escaped % then don't increase the array index
+      if (match === '%%') return match;
+      index++;
+      var formatter = exports.formatters[format];
+      if ('function' === typeof formatter) {
+        var val = args[index];
+        match = formatter.call(self, val);
+
+        // now we need to remove `args[index]` since it's inlined in the `format`
+        args.splice(index, 1);
+        index--;
+      }
+      return match;
+    });
+
+    // apply env-specific formatting (colors, etc.)
+    exports.formatArgs.call(self, args);
+
+    var logFn = debug.log || exports.log || console.log.bind(console);
+    logFn.apply(self, args);
+  }
+
+  debug.namespace = namespace;
+  debug.enabled = exports.enabled(namespace);
+  debug.useColors = exports.useColors();
+  debug.color = selectColor(namespace);
+
+  // env-specific initialization logic for debug instances
+  if ('function' === typeof exports.init) {
+    exports.init(debug);
+  }
+
+  return debug;
+}
+
+/**
+ * Enables a debug mode by namespaces. This can include modes
+ * separated by a colon and wildcards.
+ *
+ * @param {String} namespaces
+ * @api public
+ */
+
+function enable(namespaces) {
+  exports.save(namespaces);
+
+  exports.names = [];
+  exports.skips = [];
+
+  var split = (typeof namespaces === 'string' ? namespaces : '').split(/[\s,]+/);
+  var len = split.length;
+
+  for (var i = 0; i < len; i++) {
+    if (!split[i]) continue; // ignore empty strings
+    namespaces = split[i].replace(/\*/g, '.*?');
+    if (namespaces[0] === '-') {
+      exports.skips.push(new RegExp('^' + namespaces.substr(1) + '$'));
+    } else {
+      exports.names.push(new RegExp('^' + namespaces + '$'));
+    }
+  }
+}
+
+/**
+ * Disable debug output.
+ *
+ * @api public
+ */
+
+function disable() {
+  exports.enable('');
+}
+
+/**
+ * Returns true if the given mode name is enabled, false otherwise.
+ *
+ * @param {String} name
+ * @return {Boolean}
+ * @api public
+ */
+
+function enabled(name) {
+  var i, len;
+  for (i = 0, len = exports.skips.length; i < len; i++) {
+    if (exports.skips[i].test(name)) {
+      return false;
+    }
+  }
+  for (i = 0, len = exports.names.length; i < len; i++) {
+    if (exports.names[i].test(name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Coerce `val`.
+ *
+ * @param {Mixed} val
+ * @return {Mixed}
+ * @api private
+ */
+
+function coerce(val) {
+  if (val instanceof Error) return val.stack || val.message;
+  return val;
+}
+
+
+/***/ }),
+
+/***/ 6565:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/**
+ * Detect Electron renderer process, which is node, but we should
+ * treat as a browser.
+ */
+
+if (typeof process !== 'undefined' && process.type === 'renderer') {
+  module.exports = __webpack_require__(6237);
+} else {
+  module.exports = __webpack_require__(6938);
+}
+
+
+/***/ }),
+
+/***/ 6938:
+/***/ ((module, exports, __webpack_require__) => {
+
+/**
+ * Module dependencies.
+ */
+
+var tty = __webpack_require__(6224);
+var util = __webpack_require__(3837);
+
+/**
+ * This is the Node.js implementation of `debug()`.
+ *
+ * Expose `debug()` as the module.
+ */
+
+exports = module.exports = __webpack_require__(7105);
+exports.init = init;
+exports.log = log;
+exports.formatArgs = formatArgs;
+exports.save = save;
+exports.load = load;
+exports.useColors = useColors;
+
+/**
+ * Colors.
+ */
+
+exports.colors = [6, 2, 3, 4, 5, 1];
+
+/**
+ * Build up the default `inspectOpts` object from the environment variables.
+ *
+ *   $ DEBUG_COLORS=no DEBUG_DEPTH=10 DEBUG_SHOW_HIDDEN=enabled node script.js
+ */
+
+exports.inspectOpts = Object.keys(({})).filter(function (key) {
+  return /^debug_/i.test(key);
+}).reduce(function (obj, key) {
+  // camel-case
+  var prop = key
+    .substring(6)
+    .toLowerCase()
+    .replace(/_([a-z])/g, function (_, k) { return k.toUpperCase() });
+
+  // coerce string value into JS value
+  var val = ({})[key];
+  if (/^(yes|on|true|enabled)$/i.test(val)) val = true;
+  else if (/^(no|off|false|disabled)$/i.test(val)) val = false;
+  else if (val === 'null') val = null;
+  else val = Number(val);
+
+  obj[prop] = val;
+  return obj;
+}, {});
+
+/**
+ * The file descriptor to write the `debug()` calls to.
+ * Set the `DEBUG_FD` env variable to override with another value. i.e.:
+ *
+ *   $ DEBUG_FD=3 node script.js 3>debug.log
+ */
+
+var fd = parseInt(({}).DEBUG_FD, 10) || 2;
+
+if (1 !== fd && 2 !== fd) {
+  util.deprecate(function(){}, 'except for stderr(2) and stdout(1), any other usage of DEBUG_FD is deprecated. Override debug.log if you want to use a different log function (https://git.io/debug_fd)')()
+}
+
+var stream = 1 === fd ? process.stdout :
+             2 === fd ? process.stderr :
+             createWritableStdioStream(fd);
+
+/**
+ * Is stdout a TTY? Colored output is enabled when `true`.
+ */
+
+function useColors() {
+  return 'colors' in exports.inspectOpts
+    ? Boolean(exports.inspectOpts.colors)
+    : tty.isatty(fd);
+}
+
+/**
+ * Map %o to `util.inspect()`, all on a single line.
+ */
+
+exports.formatters.o = function(v) {
+  this.inspectOpts.colors = this.useColors;
+  return util.inspect(v, this.inspectOpts)
+    .split('\n').map(function(str) {
+      return str.trim()
+    }).join(' ');
+};
+
+/**
+ * Map %o to `util.inspect()`, allowing multiple lines if needed.
+ */
+
+exports.formatters.O = function(v) {
+  this.inspectOpts.colors = this.useColors;
+  return util.inspect(v, this.inspectOpts);
+};
+
+/**
+ * Adds ANSI color escape codes if enabled.
+ *
+ * @api public
+ */
+
+function formatArgs(args) {
+  var name = this.namespace;
+  var useColors = this.useColors;
+
+  if (useColors) {
+    var c = this.color;
+    var prefix = '  \u001b[3' + c + ';1m' + name + ' ' + '\u001b[0m';
+
+    args[0] = prefix + args[0].split('\n').join('\n' + prefix);
+    args.push('\u001b[3' + c + 'm+' + exports.humanize(this.diff) + '\u001b[0m');
+  } else {
+    args[0] = new Date().toUTCString()
+      + ' ' + name + ' ' + args[0];
+  }
+}
+
+/**
+ * Invokes `util.format()` with the specified arguments and writes to `stream`.
+ */
+
+function log() {
+  return stream.write(util.format.apply(util, arguments) + '\n');
+}
+
+/**
+ * Save `namespaces`.
+ *
+ * @param {String} namespaces
+ * @api private
+ */
+
+function save(namespaces) {
+  if (null == namespaces) {
+    // If you set a process.env field to null or undefined, it gets cast to the
+    // string 'null' or 'undefined'. Just delete instead.
+    delete ({}).DEBUG;
+  } else {
+    ({}).DEBUG = namespaces;
+  }
+}
+
+/**
+ * Load `namespaces`.
+ *
+ * @return {String} returns the previously persisted debug modes
+ * @api private
+ */
+
+function load() {
+  return ({}).DEBUG;
+}
+
+/**
+ * Copied from `node/src/node.js`.
+ *
+ * XXX: It's lame that node doesn't expose this API out-of-the-box. It also
+ * relies on the undocumented `tty_wrap.guessHandleType()` which is also lame.
+ */
+
+function createWritableStdioStream (fd) {
+  var stream;
+  var tty_wrap = process.binding('tty_wrap');
+
+  // Note stream._type is used for test-module-load-list.js
+
+  switch (tty_wrap.guessHandleType(fd)) {
+    case 'TTY':
+      stream = new tty.WriteStream(fd);
+      stream._type = 'tty';
+
+      // Hack to have stream not keep the event loop alive.
+      // See https://github.com/joyent/node/issues/1726
+      if (stream._handle && stream._handle.unref) {
+        stream._handle.unref();
+      }
+      break;
+
+    case 'FILE':
+      var fs = __webpack_require__(7147);
+      stream = new fs.SyncWriteStream(fd, { autoClose: false });
+      stream._type = 'fs';
+      break;
+
+    case 'PIPE':
+    case 'TCP':
+      var net = __webpack_require__(1808);
+      stream = new net.Socket({
+        fd: fd,
+        readable: false,
+        writable: true
+      });
+
+      // FIXME Should probably have an option in net.Socket to create a
+      // stream from an existing fd which is writable only. But for now
+      // we'll just add this hack and set the `readable` member to false.
+      // Test: ./node test/fixtures/echo.js < /etc/passwd
+      stream.readable = false;
+      stream.read = null;
+      stream._type = 'pipe';
+
+      // FIXME Hack to have stream not keep the event loop alive.
+      // See https://github.com/joyent/node/issues/1726
+      if (stream._handle && stream._handle.unref) {
+        stream._handle.unref();
+      }
+      break;
+
+    default:
+      // Probably an error on in uv_guess_handle()
+      throw new Error('Implement me. Unknown stream file type!');
+  }
+
+  // For supporting legacy API we put the FD here.
+  stream.fd = fd;
+
+  stream._isStdio = true;
+
+  return stream;
+}
+
+/**
+ * Init logic for `debug` instances.
+ *
+ * Create a new `inspectOpts` object in case `useColors` is set
+ * differently for a particular `debug` instance.
+ */
+
+function init (debug) {
+  debug.inspectOpts = {};
+
+  var keys = Object.keys(exports.inspectOpts);
+  for (var i = 0; i < keys.length; i++) {
+    debug.inspectOpts[keys[i]] = exports.inspectOpts[keys[i]];
+  }
+}
+
+/**
+ * Enable namespaces listed in `process.env.DEBUG` initially.
+ */
+
+exports.enable(load());
+
+
+/***/ }),
+
+/***/ 5079:
+/***/ ((module) => {
+
+/**
+ * Helpers.
+ */
+
+var s = 1000;
+var m = s * 60;
+var h = m * 60;
+var d = h * 24;
+var y = d * 365.25;
+
+/**
+ * Parse or format the given `val`.
+ *
+ * Options:
+ *
+ *  - `long` verbose formatting [false]
+ *
+ * @param {String|Number} val
+ * @param {Object} [options]
+ * @throws {Error} throw an error if val is not a non-empty string or a number
+ * @return {String|Number}
+ * @api public
+ */
+
+module.exports = function(val, options) {
+  options = options || {};
+  var type = typeof val;
+  if (type === 'string' && val.length > 0) {
+    return parse(val);
+  } else if (type === 'number' && isNaN(val) === false) {
+    return options.long ? fmtLong(val) : fmtShort(val);
+  }
+  throw new Error(
+    'val is not a non-empty string or a valid number. val=' +
+      JSON.stringify(val)
+  );
+};
+
+/**
+ * Parse the given `str` and return milliseconds.
+ *
+ * @param {String} str
+ * @return {Number}
+ * @api private
+ */
+
+function parse(str) {
+  str = String(str);
+  if (str.length > 100) {
+    return;
+  }
+  var match = /^((?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|years?|yrs?|y)?$/i.exec(
+    str
+  );
+  if (!match) {
+    return;
+  }
+  var n = parseFloat(match[1]);
+  var type = (match[2] || 'ms').toLowerCase();
+  switch (type) {
+    case 'years':
+    case 'year':
+    case 'yrs':
+    case 'yr':
+    case 'y':
+      return n * y;
+    case 'days':
+    case 'day':
+    case 'd':
+      return n * d;
+    case 'hours':
+    case 'hour':
+    case 'hrs':
+    case 'hr':
+    case 'h':
+      return n * h;
+    case 'minutes':
+    case 'minute':
+    case 'mins':
+    case 'min':
+    case 'm':
+      return n * m;
+    case 'seconds':
+    case 'second':
+    case 'secs':
+    case 'sec':
+    case 's':
+      return n * s;
+    case 'milliseconds':
+    case 'millisecond':
+    case 'msecs':
+    case 'msec':
+    case 'ms':
+      return n;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Short format for `ms`.
+ *
+ * @param {Number} ms
+ * @return {String}
+ * @api private
+ */
+
+function fmtShort(ms) {
+  if (ms >= d) {
+    return Math.round(ms / d) + 'd';
+  }
+  if (ms >= h) {
+    return Math.round(ms / h) + 'h';
+  }
+  if (ms >= m) {
+    return Math.round(ms / m) + 'm';
+  }
+  if (ms >= s) {
+    return Math.round(ms / s) + 's';
+  }
+  return ms + 'ms';
+}
+
+/**
+ * Long format for `ms`.
+ *
+ * @param {Number} ms
+ * @return {String}
+ * @api private
+ */
+
+function fmtLong(ms) {
+  return plural(ms, d, 'day') ||
+    plural(ms, h, 'hour') ||
+    plural(ms, m, 'minute') ||
+    plural(ms, s, 'second') ||
+    ms + ' ms';
+}
+
+/**
+ * Pluralization helper.
+ */
+
+function plural(ms, n, name) {
+  if (ms < n) {
+    return;
+  }
+  if (ms < n * 1.5) {
+    return Math.floor(ms / n) + ' ' + name;
+  }
+  return Math.ceil(ms / n) + ' ' + name + 's';
+}
+
+
+/***/ }),
+
+/***/ 6748:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+// This file was copied from https://github.com/substack/node-bufferlist
+// and modified to be able to copy bytes from the bufferlist directly into
+// a pre-existing fixed-size buffer without an additional memory allocation.
+
+// bufferlist.js
+// Treat a linked list of buffers as a single variable-size buffer.
+var Buffer = (__webpack_require__(4300).Buffer);
+var EventEmitter = (__webpack_require__(2361).EventEmitter);
+var bufferAllocUnsafe = (__webpack_require__(4636).bufferAllocUnsafe);
+
+module.exports = BufferList;
+module.exports.BufferList = BufferList; // backwards compatibility
+
+function BufferList(opts) {
+    if (!(this instanceof BufferList)) return new BufferList(opts);
+    EventEmitter.call(this);
+    var self = this;
+    
+    if (typeof(opts) == 'undefined') opts = {};
+    
+    // default encoding to use for take(). Leaving as 'undefined'
+    // makes take() return a Buffer instead.
+    self.encoding = opts.encoding;
+    
+    var head = { next : null, buffer : null };
+    var last = { next : null, buffer : null };
+    
+    // length can get negative when advanced past the end
+    // and this is the desired behavior
+    var length = 0;
+    self.__defineGetter__('length', function () {
+        return length;
+    });
+    
+    // keep an offset of the head to decide when to head = head.next
+    var offset = 0;
+    
+    // Write to the bufferlist. Emits 'write'. Always returns true.
+    self.write = function (buf) {
+        if (!head.buffer) {
+            head.buffer = buf;
+            last = head;
+        }
+        else {
+            last.next = { next : null, buffer : buf };
+            last = last.next;
+        }
+        length += buf.length;
+        self.emit('write', buf);
+        return true;
+    };
+    
+    self.end = function (buf) {
+        if (Buffer.isBuffer(buf)) self.write(buf);
+    };
+    
+    // Push buffers to the end of the linked list. (deprecated)
+    // Return this (self).
+    self.push = function () {
+        var args = [].concat.apply([], arguments);
+        args.forEach(self.write);
+        return self;
+    };
+    
+    // For each buffer, perform some action.
+    // If fn's result is a true value, cut out early.
+    // Returns this (self).
+    self.forEach = function (fn) {
+        if (!head.buffer) return bufferAllocUnsafe(0);
+        
+        if (head.buffer.length - offset <= 0) return self;
+        var firstBuf = head.buffer.slice(offset);
+        
+        var b = { buffer : firstBuf, next : head.next };
+        
+        while (b && b.buffer) {
+            var r = fn(b.buffer);
+            if (r) break;
+            b = b.next;
+        }
+        
+        return self;
+    };
+    
+    // Create a single Buffer out of all the chunks or some subset specified by
+    // start and one-past the end (like slice) in bytes.
+    self.join = function (start, end) {
+        if (!head.buffer) return bufferAllocUnsafe(0);
+        if (start == undefined) start = 0;
+        if (end == undefined) end = self.length;
+        
+        var big = bufferAllocUnsafe(end - start);
+        var ix = 0;
+        self.forEach(function (buffer) {
+            if (start < (ix + buffer.length) && ix < end) {
+                // at least partially contained in the range
+                buffer.copy(
+                    big,
+                    Math.max(0, ix - start),
+                    Math.max(0, start - ix),
+                    Math.min(buffer.length, end - ix)
+                );
+            }
+            ix += buffer.length;
+            if (ix > end) return true; // stop processing past end
+        });
+        
+        return big;
+    };
+    
+    self.joinInto = function (targetBuffer, targetStart, sourceStart, sourceEnd) {
+        if (!head.buffer) return new bufferAllocUnsafe(0);
+        if (sourceStart == undefined) sourceStart = 0;
+        if (sourceEnd == undefined) sourceEnd = self.length;
+        
+        var big = targetBuffer;
+        if (big.length - targetStart < sourceEnd - sourceStart) {
+            throw new Error("Insufficient space available in target Buffer.");
+        }
+        var ix = 0;
+        self.forEach(function (buffer) {
+            if (sourceStart < (ix + buffer.length) && ix < sourceEnd) {
+                // at least partially contained in the range
+                buffer.copy(
+                    big,
+                    Math.max(targetStart, targetStart + ix - sourceStart),
+                    Math.max(0, sourceStart - ix),
+                    Math.min(buffer.length, sourceEnd - ix)
+                );
+            }
+            ix += buffer.length;
+            if (ix > sourceEnd) return true; // stop processing past end
+        });
+        
+        return big;
+    };
+    
+    // Advance the buffer stream by n bytes.
+    // If n the aggregate advance offset passes the end of the buffer list,
+    // operations such as .take() will return empty strings until enough data is
+    // pushed.
+    // Returns this (self).
+    self.advance = function (n) {
+        offset += n;
+        length -= n;
+        while (head.buffer && offset >= head.buffer.length) {
+            offset -= head.buffer.length;
+            head = head.next
+                ? head.next
+                : { buffer : null, next : null }
+            ;
+        }
+        if (head.buffer === null) last = { next : null, buffer : null };
+        self.emit('advance', n);
+        return self;
+    };
+    
+    // Take n bytes from the start of the buffers.
+    // Returns a string.
+    // If there are less than n bytes in all the buffers or n is undefined,
+    // returns the entire concatenated buffer string.
+    self.take = function (n, encoding) {
+        if (n == undefined) n = self.length;
+        else if (typeof n !== 'number') {
+            encoding = n;
+            n = self.length;
+        }
+        var b = head;
+        if (!encoding) encoding = self.encoding;
+        if (encoding) {
+            var acc = '';
+            self.forEach(function (buffer) {
+                if (n <= 0) return true;
+                acc += buffer.toString(
+                    encoding, 0, Math.min(n,buffer.length)
+                );
+                n -= buffer.length;
+            });
+            return acc;
+        } else {
+            // If no 'encoding' is specified, then return a Buffer.
+            return self.join(0, n);
+        }
+    };
+    
+    // The entire concatenated buffer as a string.
+    self.toString = function () {
+        return self.take('binary');
+    };
+}
+(__webpack_require__(3837).inherits)(BufferList, EventEmitter);
+
+
+/***/ }),
+
+/***/ 8653:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+module.exports = {
+	EventTarget : __webpack_require__(9017),
+	Event       : __webpack_require__(9861)
+};
+
+
+/***/ }),
+
+/***/ 9861:
+/***/ ((module) => {
+
+/**
+ * Expose the Event class.
+ */
+module.exports = _Event;
+
+
+function _Event(type) {
+	this.type = type;
+	this.isTrusted = false;
+
+	// Set a flag indicating this is not a DOM Event object
+	this._yaeti = true;
+}
+
+
+/***/ }),
+
+/***/ 9017:
+/***/ ((module) => {
+
+/**
+ * Expose the _EventTarget class.
+ */
+module.exports = _EventTarget;
+
+function _EventTarget() {
+	// Do nothing if called for a native EventTarget object..
+	if (typeof this.addEventListener === 'function') {
+		return;
+	}
+
+	this._listeners = {};
+
+	this.addEventListener = _addEventListener;
+	this.removeEventListener = _removeEventListener;
+	this.dispatchEvent = _dispatchEvent;
+}
+
+Object.defineProperties(_EventTarget.prototype, {
+	listeners: {
+		get: function () {
+			return this._listeners;
+		}
+	}
+});
+
+function _addEventListener(type, newListener) {
+	var
+		listenersType,
+		i, listener;
+
+	if (!type || !newListener) {
+		return;
+	}
+
+	listenersType = this._listeners[type];
+	if (listenersType === undefined) {
+		this._listeners[type] = listenersType = [];
+	}
+
+	for (i = 0; !!(listener = listenersType[i]); i++) {
+		if (listener === newListener) {
+			return;
+		}
+	}
+
+	listenersType.push(newListener);
+}
+
+function _removeEventListener(type, oldListener) {
+	var
+		listenersType,
+		i, listener;
+
+	if (!type || !oldListener) {
+		return;
+	}
+
+	listenersType = this._listeners[type];
+	if (listenersType === undefined) {
+		return;
+	}
+
+	for (i = 0; !!(listener = listenersType[i]); i++) {
+		if (listener === oldListener) {
+			listenersType.splice(i, 1);
+			break;
+		}
+	}
+
+	if (listenersType.length === 0) {
+		delete this._listeners[type];
+	}
+}
+
+function _dispatchEvent(event) {
+	var
+		type,
+		listenersType,
+		dummyListener,
+		stopImmediatePropagation = false,
+		i, listener;
+
+	if (!event || typeof event.type !== 'string') {
+		throw new Error('`event` must have a valid `type` property');
+	}
+
+	// Do some stuff to emulate DOM Event behavior (just if this is not a
+	// DOM Event object)
+	if (event._yaeti) {
+		event.target = this;
+		event.cancelable = true;
+	}
+
+	// Attempt to override the stopImmediatePropagation() method
+	try {
+		event.stopImmediatePropagation = function () {
+			stopImmediatePropagation = true;
+		};
+	} catch (error) {}
+
+	type = event.type;
+	listenersType = (this._listeners[type] || []);
+
+	dummyListener = this['on' + type];
+	if (typeof dummyListener === 'function') {
+		dummyListener.call(this, event);
+	}
+
+	for (i = 0; !!(listener = listenersType[i]); i++) {
+		if (stopImmediatePropagation) {
+			break;
+		}
+
+		listener.call(this, event);
+	}
+
+	return !event.defaultPrevented;
+}
+
+
+/***/ }),
+
+/***/ 4300:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("buffer");
+
+/***/ }),
+
+/***/ 6113:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("crypto");
+
+/***/ }),
+
+/***/ 2361:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("events");
+
+/***/ }),
+
+/***/ 7147:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("fs");
+
+/***/ }),
+
+/***/ 3685:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("http");
+
+/***/ }),
+
+/***/ 5687:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("https");
+
+/***/ }),
+
+/***/ 1808:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("net");
+
+/***/ }),
+
+/***/ 2037:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("os");
+
+/***/ }),
+
+/***/ 1017:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("path");
+
+/***/ }),
+
+/***/ 5477:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("punycode");
+
+/***/ }),
+
+/***/ 2781:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("stream");
+
+/***/ }),
+
+/***/ 6224:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("tty");
+
+/***/ }),
+
+/***/ 7310:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("url");
+
+/***/ }),
+
+/***/ 3837:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("util");
+
+/***/ }),
+
+/***/ 9796:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("zlib");
+
+/***/ }),
+
+/***/ 9794:
+/***/ ((module) => {
+
+"use strict";
+module.exports = {"version":"1.0.34"};
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = __webpack_modules__;
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/create fake namespace object */
+/******/ 	(() => {
+/******/ 		var getProto = Object.getPrototypeOf ? (obj) => (Object.getPrototypeOf(obj)) : (obj) => (obj.__proto__);
+/******/ 		var leafPrototypes;
+/******/ 		// create a fake namespace object
+/******/ 		// mode & 1: value is a module id, require it
+/******/ 		// mode & 2: merge all properties of value into the ns
+/******/ 		// mode & 4: return value when already ns object
+/******/ 		// mode & 16: return value when it's Promise-like
+/******/ 		// mode & 8|1: behave like require
+/******/ 		__webpack_require__.t = function(value, mode) {
+/******/ 			if(mode & 1) value = this(value);
+/******/ 			if(mode & 8) return value;
+/******/ 			if(typeof value === 'object' && value) {
+/******/ 				if((mode & 4) && value.__esModule) return value;
+/******/ 				if((mode & 16) && typeof value.then === 'function') return value;
+/******/ 			}
+/******/ 			var ns = Object.create(null);
+/******/ 			__webpack_require__.r(ns);
+/******/ 			var def = {};
+/******/ 			leafPrototypes = leafPrototypes || [null, getProto({}), getProto([]), getProto(getProto)];
+/******/ 			for(var current = mode & 2 && value; typeof current == 'object' && !~leafPrototypes.indexOf(current); current = getProto(current)) {
+/******/ 				Object.getOwnPropertyNames(current).forEach((key) => (def[key] = () => (value[key])));
+/******/ 			}
+/******/ 			def['default'] = () => (value);
+/******/ 			__webpack_require__.d(ns, def);
+/******/ 			return ns;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/ensure chunk */
+/******/ 	(() => {
+/******/ 		__webpack_require__.f = {};
+/******/ 		// This file contains only the entry chunk.
+/******/ 		// The chunk loading function for additional chunks
+/******/ 		__webpack_require__.e = (chunkId) => {
+/******/ 			return Promise.all(Object.keys(__webpack_require__.f).reduce((promises, key) => {
+/******/ 				__webpack_require__.f[key](chunkId, promises);
+/******/ 				return promises;
+/******/ 			}, []));
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/get javascript chunk filename */
+/******/ 	(() => {
+/******/ 		// This function allow to reference async chunks
+/******/ 		__webpack_require__.u = (chunkId) => {
+/******/ 			// return url for filenames based on template
+/******/ 			return "" + chunkId + ".js";
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/require chunk loading */
+/******/ 	(() => {
+/******/ 		// no baseURI
+/******/ 		
+/******/ 		// object to store loaded chunks
+/******/ 		// "1" means "loaded", otherwise not loaded yet
+/******/ 		var installedChunks = {
+/******/ 			47: 1
+/******/ 		};
+/******/ 		
+/******/ 		// no on chunks loaded
+/******/ 		
+/******/ 		var installChunk = (chunk) => {
+/******/ 			var moreModules = chunk.modules, chunkIds = chunk.ids, runtime = chunk.runtime;
+/******/ 			for(var moduleId in moreModules) {
+/******/ 				if(__webpack_require__.o(moreModules, moduleId)) {
+/******/ 					__webpack_require__.m[moduleId] = moreModules[moduleId];
+/******/ 				}
+/******/ 			}
+/******/ 			if(runtime) runtime(__webpack_require__);
+/******/ 			for(var i = 0; i < chunkIds.length; i++)
+/******/ 				installedChunks[chunkIds[i]] = 1;
+/******/ 		
+/******/ 		};
+/******/ 		
+/******/ 		// require() chunk loading for javascript
+/******/ 		__webpack_require__.f.require = (chunkId, promises) => {
+/******/ 			// "1" is the signal for "already loaded"
+/******/ 			if(!installedChunks[chunkId]) {
+/******/ 				if(true) { // all chunks have JS
+/******/ 					installChunk(require("./" + __webpack_require__.u(chunkId)));
+/******/ 				} else installedChunks[chunkId] = 1;
+/******/ 			}
+/******/ 		};
+/******/ 		
+/******/ 		// no external install chunk
+/******/ 		
+/******/ 		// no HMR
+/******/ 		
+/******/ 		// no HMR manifest
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+(() => {
+"use strict";
+// ESM COMPAT FLAG
+__webpack_require__.r(__webpack_exports__);
+
+// EXPORTS
+__webpack_require__.d(__webpack_exports__, {
+  "addSubscription": () => (/* binding */ addSubscription),
+  "removeSubscription": () => (/* binding */ removeSubscription),
+  "supabase": () => (/* binding */ supabase)
+});
+
+;// CONCATENATED MODULE: ./node_modules/@supabase/supabase-js/dist/module/lib/version.js
+const version = '1.35.7';
+//# sourceMappingURL=version.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/supabase-js/dist/module/lib/constants.js
+// constants.ts
+
+const DEFAULT_HEADERS = { 'X-Client-Info': `supabase-js/${version}` };
+const STORAGE_KEY = 'supabase.auth.token';
+//# sourceMappingURL=constants.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/supabase-js/dist/module/lib/helpers.js
+// helpers.ts
+function uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = (Math.random() * 16) | 0, v = c == 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+}
+function stripTrailingSlash(url) {
+    return url.replace(/\/$/, '');
+}
+const isBrowser = () => typeof window !== 'undefined';
+//# sourceMappingURL=helpers.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/gotrue-js/dist/module/lib/version.js
+// generated by genversion
+const version_version = '1.24.0';
+//# sourceMappingURL=version.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/gotrue-js/dist/module/lib/constants.js
+
+const GOTRUE_URL = 'http://localhost:9999';
+const AUDIENCE = '';
+const constants_DEFAULT_HEADERS = { 'X-Client-Info': `gotrue-js/${version_version}` };
+const EXPIRY_MARGIN = 10; // in seconds
+const NETWORK_FAILURE = {
+    ERROR_MESSAGE: 'Request Failed',
+    MAX_RETRIES: 10,
+    RETRY_INTERVAL: 2, // in deciseconds
+};
+const constants_STORAGE_KEY = 'supabase.auth.token';
+const COOKIE_OPTIONS = {
+    name: 'sb',
+    lifetime: 60 * 60 * 8,
+    domain: '',
+    path: '/',
+    sameSite: 'lax',
+};
+//# sourceMappingURL=constants.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/gotrue-js/dist/module/lib/fetch.js
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+const _getErrorMessage = (err) => err.msg || err.message || err.error_description || err.error || JSON.stringify(err);
+const handleError = (error, reject) => {
+    if (!(error === null || error === void 0 ? void 0 : error.status)) {
+        return reject({ message: NETWORK_FAILURE.ERROR_MESSAGE });
+    }
+    if (typeof error.json !== 'function') {
+        return reject(error);
+    }
+    error.json().then((err) => {
+        return reject({
+            message: _getErrorMessage(err),
+            status: (error === null || error === void 0 ? void 0 : error.status) || 500,
+        });
+    });
+};
+const _getRequestParams = (method, options, body) => {
+    const params = { method, headers: (options === null || options === void 0 ? void 0 : options.headers) || {} };
+    if (method === 'GET') {
+        return params;
+    }
+    params.headers = Object.assign({ 'Content-Type': 'application/json;charset=UTF-8' }, options === null || options === void 0 ? void 0 : options.headers);
+    params.body = JSON.stringify(body);
+    return params;
+};
+function _handleRequest(fetcher, method, url, options, body) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            fetcher(url, _getRequestParams(method, options, body))
+                .then((result) => {
+                if (!result.ok)
+                    throw result;
+                if (options === null || options === void 0 ? void 0 : options.noResolveJson)
+                    return resolve;
+                return result.json();
+            })
+                .then((data) => resolve(data))
+                .catch((error) => handleError(error, reject));
+        });
+    });
+}
+function get(fetcher, url, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return _handleRequest(fetcher, 'GET', url, options);
+    });
+}
+function post(fetcher, url, body, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return _handleRequest(fetcher, 'POST', url, options, body);
+    });
+}
+function put(fetcher, url, body, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return _handleRequest(fetcher, 'PUT', url, options, body);
+    });
+}
+function remove(fetcher, url, body, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return _handleRequest(fetcher, 'DELETE', url, options, body);
+    });
+}
+//# sourceMappingURL=fetch.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/gotrue-js/dist/module/lib/cookies.js
+/**
+ * Serialize data into a cookie header.
+ */
+function serialize(name, val, options) {
+    const opt = options || {};
+    const enc = encodeURIComponent;
+    /* eslint-disable-next-line no-control-regex */
+    const fieldContentRegExp = /^[\u0009\u0020-\u007e\u0080-\u00ff]+$/;
+    if (typeof enc !== 'function') {
+        throw new TypeError('option encode is invalid');
+    }
+    if (!fieldContentRegExp.test(name)) {
+        throw new TypeError('argument name is invalid');
+    }
+    const value = enc(val);
+    if (value && !fieldContentRegExp.test(value)) {
+        throw new TypeError('argument val is invalid');
+    }
+    let str = name + '=' + value;
+    if (null != opt.maxAge) {
+        const maxAge = opt.maxAge - 0;
+        if (isNaN(maxAge) || !isFinite(maxAge)) {
+            throw new TypeError('option maxAge is invalid');
+        }
+        str += '; Max-Age=' + Math.floor(maxAge);
+    }
+    if (opt.domain) {
+        if (!fieldContentRegExp.test(opt.domain)) {
+            throw new TypeError('option domain is invalid');
+        }
+        str += '; Domain=' + opt.domain;
+    }
+    if (opt.path) {
+        if (!fieldContentRegExp.test(opt.path)) {
+            throw new TypeError('option path is invalid');
+        }
+        str += '; Path=' + opt.path;
+    }
+    if (opt.expires) {
+        if (typeof opt.expires.toUTCString !== 'function') {
+            throw new TypeError('option expires is invalid');
+        }
+        str += '; Expires=' + opt.expires.toUTCString();
+    }
+    if (opt.httpOnly) {
+        str += '; HttpOnly';
+    }
+    if (opt.secure) {
+        str += '; Secure';
+    }
+    if (opt.sameSite) {
+        const sameSite = typeof opt.sameSite === 'string' ? opt.sameSite.toLowerCase() : opt.sameSite;
+        switch (sameSite) {
+            case 'lax':
+                str += '; SameSite=Lax';
+                break;
+            case 'strict':
+                str += '; SameSite=Strict';
+                break;
+            case 'none':
+                str += '; SameSite=None';
+                break;
+            default:
+                throw new TypeError('option sameSite is invalid');
+        }
+    }
+    return str;
+}
+/**
+ * Based on the environment and the request we know if a secure cookie can be set.
+ */
+function isSecureEnvironment(req) {
+    if (!req || !req.headers || !req.headers.host) {
+        throw new Error('The "host" request header is not available');
+    }
+    const host = (req.headers.host.indexOf(':') > -1 && req.headers.host.split(':')[0]) || req.headers.host;
+    if (['localhost', '127.0.0.1'].indexOf(host) > -1 || host.endsWith('.local')) {
+        return false;
+    }
+    return true;
+}
+/**
+ * Serialize a cookie to a string.
+ */
+function serializeCookie(cookie, secure) {
+    var _a, _b, _c;
+    return serialize(cookie.name, cookie.value, {
+        maxAge: cookie.maxAge,
+        expires: new Date(Date.now() + cookie.maxAge * 1000),
+        httpOnly: true,
+        secure,
+        path: (_a = cookie.path) !== null && _a !== void 0 ? _a : '/',
+        domain: (_b = cookie.domain) !== null && _b !== void 0 ? _b : '',
+        sameSite: (_c = cookie.sameSite) !== null && _c !== void 0 ? _c : 'lax',
+    });
+}
+/**
+ * Get Cookie Header strings.
+ */
+function getCookieString(req, res, cookies) {
+    const strCookies = cookies.map((c) => serializeCookie(c, isSecureEnvironment(req)));
+    const previousCookies = res.getHeader('Set-Cookie');
+    if (previousCookies) {
+        if (previousCookies instanceof Array) {
+            Array.prototype.push.apply(strCookies, previousCookies);
+        }
+        else if (typeof previousCookies === 'string') {
+            strCookies.push(previousCookies);
+        }
+    }
+    return strCookies;
+}
+/**
+ * Set one or more cookies.
+ */
+function setCookies(req, res, cookies) {
+    res.setHeader('Set-Cookie', getCookieString(req, res, cookies));
+}
+/**
+ * Set one or more cookies.
+ */
+function setCookie(req, res, cookie) {
+    setCookies(req, res, [cookie]);
+}
+function deleteCookie(req, res, name) {
+    setCookie(req, res, {
+        name,
+        value: '',
+        maxAge: -1,
+    });
+}
+//# sourceMappingURL=cookies.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/gotrue-js/dist/module/lib/helpers.js
+var helpers_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+function expiresAt(expiresIn) {
+    const timeNow = Math.round(Date.now() / 1000);
+    return timeNow + expiresIn;
+}
+function helpers_uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = (Math.random() * 16) | 0, v = c == 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+}
+const helpers_isBrowser = () => typeof window !== 'undefined';
+function getParameterByName(name, url) {
+    var _a;
+    if (!url)
+        url = ((_a = window === null || window === void 0 ? void 0 : window.location) === null || _a === void 0 ? void 0 : _a.href) || '';
+    // eslint-disable-next-line no-useless-escape
+    name = name.replace(/[\[\]]/g, '\\$&');
+    const regex = new RegExp('[?&#]' + name + '(=([^&#]*)|&|#|$)'), results = regex.exec(url);
+    if (!results)
+        return null;
+    if (!results[2])
+        return '';
+    return decodeURIComponent(results[2].replace(/\+/g, ' '));
+}
+const resolveFetch = (customFetch) => {
+    let _fetch;
+    if (customFetch) {
+        _fetch = customFetch;
+    }
+    else if (typeof fetch === 'undefined') {
+        _fetch = (...args) => helpers_awaiter(void 0, void 0, void 0, function* () { return yield (yield __webpack_require__.e(/* import() */ 165).then(__webpack_require__.t.bind(__webpack_require__, 4165, 23))).fetch(...args); });
+    }
+    else {
+        _fetch = fetch;
+    }
+    return (...args) => _fetch(...args);
+};
+// LocalStorage helpers
+const setItemAsync = (storage, key, data) => helpers_awaiter(void 0, void 0, void 0, function* () {
+    helpers_isBrowser() && (yield (storage === null || storage === void 0 ? void 0 : storage.setItem(key, JSON.stringify(data))));
+});
+const getItemAsync = (storage, key) => helpers_awaiter(void 0, void 0, void 0, function* () {
+    const value = helpers_isBrowser() && (yield (storage === null || storage === void 0 ? void 0 : storage.getItem(key)));
+    if (!value)
+        return null;
+    try {
+        return JSON.parse(value);
+    }
+    catch (_a) {
+        return value;
+    }
+});
+const getItemSynchronously = (storage, key) => {
+    const value = helpers_isBrowser() && (storage === null || storage === void 0 ? void 0 : storage.getItem(key));
+    if (!value || typeof value !== 'string') {
+        return null;
+    }
+    try {
+        return JSON.parse(value);
+    }
+    catch (_a) {
+        return value;
+    }
+};
+const removeItemAsync = (storage, key) => helpers_awaiter(void 0, void 0, void 0, function* () {
+    helpers_isBrowser() && (yield (storage === null || storage === void 0 ? void 0 : storage.removeItem(key)));
+});
+//# sourceMappingURL=helpers.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/gotrue-js/dist/module/GoTrueApi.js
+var GoTrueApi_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+
+class GoTrueApi {
+    constructor({ url = '', headers = {}, cookieOptions, fetch, }) {
+        this.url = url;
+        this.headers = headers;
+        this.cookieOptions = Object.assign(Object.assign({}, COOKIE_OPTIONS), cookieOptions);
+        this.fetch = resolveFetch(fetch);
+    }
+    /**
+     * Create a temporary object with all configured headers and
+     * adds the Authorization token to be used on request methods
+     * @param jwt A valid, logged-in JWT.
+     */
+    _createRequestHeaders(jwt) {
+        const headers = Object.assign({}, this.headers);
+        headers['Authorization'] = `Bearer ${jwt}`;
+        return headers;
+    }
+    cookieName() {
+        var _a;
+        return (_a = this.cookieOptions.name) !== null && _a !== void 0 ? _a : '';
+    }
+    /**
+     * Generates the relevant login URL for a third-party provider.
+     * @param provider One of the providers supported by GoTrue.
+     * @param redirectTo A URL or mobile address to send the user to after they are confirmed.
+     * @param scopes A space-separated list of scopes granted to the OAuth application.
+     */
+    getUrlForProvider(provider, options) {
+        const urlParams = [`provider=${encodeURIComponent(provider)}`];
+        if (options === null || options === void 0 ? void 0 : options.redirectTo) {
+            urlParams.push(`redirect_to=${encodeURIComponent(options.redirectTo)}`);
+        }
+        if (options === null || options === void 0 ? void 0 : options.scopes) {
+            urlParams.push(`scopes=${encodeURIComponent(options.scopes)}`);
+        }
+        if (options === null || options === void 0 ? void 0 : options.queryParams) {
+            const query = new URLSearchParams(options.queryParams);
+            urlParams.push(`${query}`);
+        }
+        return `${this.url}/authorize?${urlParams.join('&')}`;
+    }
+    /**
+     * Creates a new user using their email address.
+     * @param email The email address of the user.
+     * @param password The password of the user.
+     * @param redirectTo A URL or mobile address to send the user to after they are confirmed.
+     * @param data Optional user metadata.
+     * @param captchaToken Verification token received when the user completes the captcha on your site.
+     *
+     * @returns A logged-in session if the server has "autoconfirm" ON
+     * @returns A user if the server has "autoconfirm" OFF
+     */
+    signUpWithEmail(email, password, options = {}) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const headers = Object.assign({}, this.headers);
+                let queryString = '';
+                if (options.redirectTo) {
+                    queryString = '?redirect_to=' + encodeURIComponent(options.redirectTo);
+                }
+                const data = yield post(this.fetch, `${this.url}/signup${queryString}`, {
+                    email,
+                    password,
+                    data: options.data,
+                    gotrue_meta_security: { captcha_token: options.captchaToken },
+                }, { headers });
+                const session = Object.assign({}, data);
+                if (session.expires_in)
+                    session.expires_at = expiresAt(data.expires_in);
+                return { data: session, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Logs in an existing user using their email address.
+     * @param email The email address of the user.
+     * @param password The password of the user.
+     * @param redirectTo A URL or mobile address to send the user to after they are confirmed.
+     * @param captchaToken Verification token received when the user completes the captcha on your site.
+     */
+    signInWithEmail(email, password, options = {}) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const headers = Object.assign({}, this.headers);
+                let queryString = '?grant_type=password';
+                if (options.redirectTo) {
+                    queryString += '&redirect_to=' + encodeURIComponent(options.redirectTo);
+                }
+                const data = yield post(this.fetch, `${this.url}/token${queryString}`, { email, password, gotrue_meta_security: { captcha_token: options.captchaToken } }, { headers });
+                const session = Object.assign({}, data);
+                if (session.expires_in)
+                    session.expires_at = expiresAt(data.expires_in);
+                return { data: session, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Signs up a new user using their phone number and a password.
+     * @param phone The phone number of the user.
+     * @param password The password of the user.
+     * @param data Optional user metadata.
+     * @param captchaToken Verification token received when the user completes the captcha on your site.
+     */
+    signUpWithPhone(phone, password, options = {}) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const headers = Object.assign({}, this.headers);
+                const data = yield post(this.fetch, `${this.url}/signup`, {
+                    phone,
+                    password,
+                    data: options.data,
+                    gotrue_meta_security: { captcha_token: options.captchaToken },
+                }, { headers });
+                const session = Object.assign({}, data);
+                if (session.expires_in)
+                    session.expires_at = expiresAt(data.expires_in);
+                return { data: session, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Logs in an existing user using their phone number and password.
+     * @param phone The phone number of the user.
+     * @param password The password of the user.
+     * @param captchaToken Verification token received when the user completes the captcha on your site.
+     */
+    signInWithPhone(phone, password, options = {}) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const headers = Object.assign({}, this.headers);
+                const queryString = '?grant_type=password';
+                const data = yield post(this.fetch, `${this.url}/token${queryString}`, { phone, password, gotrue_meta_security: { captcha_token: options.captchaToken } }, { headers });
+                const session = Object.assign({}, data);
+                if (session.expires_in)
+                    session.expires_at = expiresAt(data.expires_in);
+                return { data: session, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Logs in an OpenID Connect user using their id_token.
+     * @param id_token The IDToken of the user.
+     * @param nonce The nonce of the user. The nonce is a random value generated by the developer (= yourself) before the initial grant is started. You should check the OpenID Connect specification for details. https://openid.net/developers/specs/
+     * @param provider The provider of the user.
+     * @param client_id The clientID of the user.
+     * @param issuer The issuer of the user.
+     */
+    signInWithOpenIDConnect({ id_token, nonce, client_id, issuer, provider, }) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const headers = Object.assign({}, this.headers);
+                const queryString = '?grant_type=id_token';
+                const data = yield post(this.fetch, `${this.url}/token${queryString}`, { id_token, nonce, client_id, issuer, provider }, { headers });
+                const session = Object.assign({}, data);
+                if (session.expires_in)
+                    session.expires_at = expiresAt(data.expires_in);
+                return { data: session, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Sends a magic login link to an email address.
+     * @param email The email address of the user.
+     * @param shouldCreateUser A boolean flag to indicate whether to automatically create a user on magiclink / otp sign-ins if the user doesn't exist. Defaults to true.
+     * @param redirectTo A URL or mobile address to send the user to after they are confirmed.
+     * @param captchaToken Verification token received when the user completes the captcha on your site.
+     */
+    sendMagicLinkEmail(email, options = {}) {
+        var _a;
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const headers = Object.assign({}, this.headers);
+                let queryString = '';
+                if (options.redirectTo) {
+                    queryString += '?redirect_to=' + encodeURIComponent(options.redirectTo);
+                }
+                const shouldCreateUser = (_a = options.shouldCreateUser) !== null && _a !== void 0 ? _a : true;
+                const data = yield post(this.fetch, `${this.url}/otp${queryString}`, {
+                    email,
+                    create_user: shouldCreateUser,
+                    gotrue_meta_security: { captcha_token: options.captchaToken },
+                }, { headers });
+                return { data, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Sends a mobile OTP via SMS. Will register the account if it doesn't already exist
+     * @param phone The user's phone number WITH international prefix
+     * @param shouldCreateUser A boolean flag to indicate whether to automatically create a user on magiclink / otp sign-ins if the user doesn't exist. Defaults to true.
+     * @param captchaToken Verification token received when the user completes the captcha on your site.
+     */
+    sendMobileOTP(phone, options = {}) {
+        var _a;
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const shouldCreateUser = (_a = options.shouldCreateUser) !== null && _a !== void 0 ? _a : true;
+                const headers = Object.assign({}, this.headers);
+                const data = yield post(this.fetch, `${this.url}/otp`, {
+                    phone,
+                    create_user: shouldCreateUser,
+                    gotrue_meta_security: { captcha_token: options.captchaToken },
+                }, { headers });
+                return { data, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Removes a logged-in session.
+     * @param jwt A valid, logged-in JWT.
+     */
+    signOut(jwt) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                yield post(this.fetch, `${this.url}/logout`, {}, { headers: this._createRequestHeaders(jwt), noResolveJson: true });
+                return { error: null };
+            }
+            catch (e) {
+                return { error: e };
+            }
+        });
+    }
+    /**
+     * @deprecated Use `verifyOTP` instead!
+     * @param phone The user's phone number WITH international prefix
+     * @param token token that user was sent to their mobile phone
+     * @param redirectTo A URL or mobile address to send the user to after they are confirmed.
+     */
+    verifyMobileOTP(phone, token, options = {}) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const headers = Object.assign({}, this.headers);
+                const data = yield post(this.fetch, `${this.url}/verify`, { phone, token, type: 'sms', redirect_to: options.redirectTo }, { headers });
+                const session = Object.assign({}, data);
+                if (session.expires_in)
+                    session.expires_at = expiresAt(data.expires_in);
+                return { data: session, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Send User supplied Email / Mobile OTP to be verified
+     * @param email The user's email address
+     * @param phone The user's phone number WITH international prefix
+     * @param token token that user was sent to their mobile phone
+     * @param type verification type that the otp is generated for
+     * @param redirectTo A URL or mobile address to send the user to after they are confirmed.
+     */
+    verifyOTP({ email, phone, token, type = 'sms' }, options = {}) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const headers = Object.assign({}, this.headers);
+                const data = yield post(this.fetch, `${this.url}/verify`, { email, phone, token, type, redirect_to: options.redirectTo }, { headers });
+                const session = Object.assign({}, data);
+                if (session.expires_in)
+                    session.expires_at = expiresAt(data.expires_in);
+                return { data: session, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Sends an invite link to an email address.
+     * @param email The email address of the user.
+     * @param redirectTo A URL or mobile address to send the user to after they are confirmed.
+     * @param data Optional user metadata
+     */
+    inviteUserByEmail(email, options = {}) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const headers = Object.assign({}, this.headers);
+                let queryString = '';
+                if (options.redirectTo) {
+                    queryString += '?redirect_to=' + encodeURIComponent(options.redirectTo);
+                }
+                const data = yield post(this.fetch, `${this.url}/invite${queryString}`, { email, data: options.data }, { headers });
+                return { data, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Sends a reset request to an email address.
+     * @param email The email address of the user.
+     * @param redirectTo A URL or mobile address to send the user to after they are confirmed.
+     * @param captchaToken Verification token received when the user completes the captcha on your site.
+     */
+    resetPasswordForEmail(email, options = {}) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const headers = Object.assign({}, this.headers);
+                let queryString = '';
+                if (options.redirectTo) {
+                    queryString += '?redirect_to=' + encodeURIComponent(options.redirectTo);
+                }
+                const data = yield post(this.fetch, `${this.url}/recover${queryString}`, { email, gotrue_meta_security: { captcha_token: options.captchaToken } }, { headers });
+                return { data, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Generates a new JWT.
+     * @param refreshToken A valid refresh token that was returned on login.
+     */
+    refreshAccessToken(refreshToken) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield post(this.fetch, `${this.url}/token?grant_type=refresh_token`, { refresh_token: refreshToken }, { headers: this.headers });
+                const session = Object.assign({}, data);
+                if (session.expires_in)
+                    session.expires_at = expiresAt(data.expires_in);
+                return { data: session, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Set/delete the auth cookie based on the AuthChangeEvent.
+     * Works for Next.js & Express (requires cookie-parser middleware).
+     * @param req The request object.
+     * @param res The response object.
+     */
+    setAuthCookie(req, res) {
+        if (req.method !== 'POST') {
+            res.setHeader('Allow', 'POST');
+            res.status(405).end('Method Not Allowed');
+        }
+        const { event, session } = req.body;
+        if (!event)
+            throw new Error('Auth event missing!');
+        if (event === 'SIGNED_IN') {
+            if (!session)
+                throw new Error('Auth session missing!');
+            setCookies(req, res, [
+                { key: 'access-token', value: session.access_token },
+                { key: 'refresh-token', value: session.refresh_token },
+            ].map((token) => {
+                var _a;
+                return ({
+                    name: `${this.cookieName()}-${token.key}`,
+                    value: token.value,
+                    domain: this.cookieOptions.domain,
+                    maxAge: (_a = this.cookieOptions.lifetime) !== null && _a !== void 0 ? _a : 0,
+                    path: this.cookieOptions.path,
+                    sameSite: this.cookieOptions.sameSite,
+                });
+            }));
+        }
+        if (event === 'SIGNED_OUT') {
+            setCookies(req, res, ['access-token', 'refresh-token'].map((key) => ({
+                name: `${this.cookieName()}-${key}`,
+                value: '',
+                maxAge: -1,
+            })));
+        }
+        res.status(200).json({});
+    }
+    /**
+     * Deletes the Auth Cookies and redirects to the
+     * @param req The request object.
+     * @param res The response object.
+     * @param options Optionally specify a `redirectTo` URL in the options.
+     */
+    deleteAuthCookie(req, res, { redirectTo = '/' }) {
+        setCookies(req, res, ['access-token', 'refresh-token'].map((key) => ({
+            name: `${this.cookieName()}-${key}`,
+            value: '',
+            maxAge: -1,
+        })));
+        return res.redirect(307, redirectTo);
+    }
+    /**
+     * Helper method to generate the Auth Cookie string for you in case you can't use `setAuthCookie`.
+     * @param req The request object.
+     * @param res The response object.
+     * @returns The Cookie string that needs to be set as the value for the `Set-Cookie` header.
+     */
+    getAuthCookieString(req, res) {
+        if (req.method !== 'POST') {
+            res.setHeader('Allow', 'POST');
+            res.status(405).end('Method Not Allowed');
+        }
+        const { event, session } = req.body;
+        if (!event)
+            throw new Error('Auth event missing!');
+        if (event === 'SIGNED_IN') {
+            if (!session)
+                throw new Error('Auth session missing!');
+            return getCookieString(req, res, [
+                { key: 'access-token', value: session.access_token },
+                { key: 'refresh-token', value: session.refresh_token },
+            ].map((token) => {
+                var _a;
+                return ({
+                    name: `${this.cookieName()}-${token.key}`,
+                    value: token.value,
+                    domain: this.cookieOptions.domain,
+                    maxAge: (_a = this.cookieOptions.lifetime) !== null && _a !== void 0 ? _a : 0,
+                    path: this.cookieOptions.path,
+                    sameSite: this.cookieOptions.sameSite,
+                });
+            }));
+        }
+        if (event === 'SIGNED_OUT') {
+            return getCookieString(req, res, ['access-token', 'refresh-token'].map((key) => ({
+                name: `${this.cookieName()}-${key}`,
+                value: '',
+                maxAge: -1,
+            })));
+        }
+        return res.getHeader('Set-Cookie');
+    }
+    /**
+     * Generates links to be sent via email or other.
+     * @param type The link type ("signup" or "magiclink" or "recovery" or "invite").
+     * @param email The user's email.
+     * @param password User password. For signup only.
+     * @param data Optional user metadata. For signup only.
+     * @param redirectTo The link type ("signup" or "magiclink" or "recovery" or "invite").
+     */
+    generateLink(type, email, options = {}) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield post(this.fetch, `${this.url}/admin/generate_link`, {
+                    type,
+                    email,
+                    password: options.password,
+                    data: options.data,
+                    redirect_to: options.redirectTo,
+                }, { headers: this.headers });
+                return { data, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    // User Admin API
+    /**
+     * Creates a new user.
+     *
+     * This function should only be called on a server. Never expose your `service_role` key in the browser.
+     *
+     * @param attributes The data you want to create the user with.
+     */
+    createUser(attributes) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield post(this.fetch, `${this.url}/admin/users`, attributes, {
+                    headers: this.headers,
+                });
+                return { user: data, data, error: null };
+            }
+            catch (e) {
+                return { user: null, data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Get a list of users.
+     *
+     * This function should only be called on a server. Never expose your `service_role` key in the browser.
+     */
+    listUsers() {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield get(this.fetch, `${this.url}/admin/users`, {
+                    headers: this.headers,
+                });
+                return { data: data.users, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Get user by id.
+     *
+     * @param uid The user's unique identifier
+     *
+     * This function should only be called on a server. Never expose your `service_role` key in the browser.
+     */
+    getUserById(uid) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield get(this.fetch, `${this.url}/admin/users/${uid}`, {
+                    headers: this.headers,
+                });
+                return { data, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Get user by reading the cookie from the request.
+     * Works for Next.js & Express (requires cookie-parser middleware).
+     */
+    getUserByCookie(req, res) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                if (!req.cookies) {
+                    throw new Error('Not able to parse cookies! When using Express make sure the cookie-parser middleware is in use!');
+                }
+                const access_token = req.cookies[`${this.cookieName()}-access-token`];
+                const refresh_token = req.cookies[`${this.cookieName()}-refresh-token`];
+                if (!access_token) {
+                    throw new Error('No cookie found!');
+                }
+                const { user, error: getUserError } = yield this.getUser(access_token);
+                if (getUserError) {
+                    if (!refresh_token)
+                        throw new Error('No refresh_token cookie found!');
+                    if (!res)
+                        throw new Error('You need to pass the res object to automatically refresh the session!');
+                    const { data, error } = yield this.refreshAccessToken(refresh_token);
+                    if (error) {
+                        throw error;
+                    }
+                    else if (data) {
+                        setCookies(req, res, [
+                            { key: 'access-token', value: data.access_token },
+                            { key: 'refresh-token', value: data.refresh_token },
+                        ].map((token) => {
+                            var _a;
+                            return ({
+                                name: `${this.cookieName()}-${token.key}`,
+                                value: token.value,
+                                domain: this.cookieOptions.domain,
+                                maxAge: (_a = this.cookieOptions.lifetime) !== null && _a !== void 0 ? _a : 0,
+                                path: this.cookieOptions.path,
+                                sameSite: this.cookieOptions.sameSite,
+                            });
+                        }));
+                        return { token: data.access_token, user: data.user, data: data.user, error: null };
+                    }
+                }
+                return { token: access_token, user: user, data: user, error: null };
+            }
+            catch (e) {
+                return { token: null, user: null, data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Updates the user data.
+     *
+     * @param attributes The data you want to update.
+     *
+     * This function should only be called on a server. Never expose your `service_role` key in the browser.
+     */
+    updateUserById(uid, attributes) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                this; //
+                const data = yield put(this.fetch, `${this.url}/admin/users/${uid}`, attributes, {
+                    headers: this.headers,
+                });
+                return { user: data, data, error: null };
+            }
+            catch (e) {
+                return { user: null, data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Delete a user. Requires a `service_role` key.
+     *
+     * This function should only be called on a server. Never expose your `service_role` key in the browser.
+     *
+     * @param uid The user uid you want to remove.
+     */
+    deleteUser(uid) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield remove(this.fetch, `${this.url}/admin/users/${uid}`, {}, {
+                    headers: this.headers,
+                });
+                return { user: data, data, error: null };
+            }
+            catch (e) {
+                return { user: null, data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Gets the current user details.
+     *
+     * This method is called by the GoTrueClient `update` where
+     * the jwt is set to this.currentSession.access_token
+     * and therefore, acts like getting the currently authenticated user
+     *
+     * @param jwt A valid, logged-in JWT. Typically, the access_token for the currentSession
+     */
+    getUser(jwt) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield get(this.fetch, `${this.url}/user`, {
+                    headers: this._createRequestHeaders(jwt),
+                });
+                return { user: data, data, error: null };
+            }
+            catch (e) {
+                return { user: null, data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Updates the user data.
+     * @param jwt A valid, logged-in JWT.
+     * @param attributes The data you want to update.
+     */
+    updateUser(jwt, attributes) {
+        return GoTrueApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield put(this.fetch, `${this.url}/user`, attributes, {
+                    headers: this._createRequestHeaders(jwt),
+                });
+                return { user: data, data, error: null };
+            }
+            catch (e) {
+                return { user: null, data: null, error: e };
+            }
+        });
+    }
+}
+//# sourceMappingURL=GoTrueApi.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/gotrue-js/dist/module/lib/polyfills.js
+/**
+ * https://mathiasbynens.be/notes/globalthis
+ */
+function polyfillGlobalThis() {
+    if (typeof globalThis === 'object')
+        return;
+    try {
+        Object.defineProperty(Object.prototype, '__magic__', {
+            get: function () {
+                return this;
+            },
+            configurable: true,
+        });
+        // @ts-expect-error 'Allow access to magic'
+        __magic__.globalThis = __magic__;
+        // @ts-expect-error 'Allow access to magic'
+        delete Object.prototype.__magic__;
+    }
+    catch (e) {
+        if (typeof self !== 'undefined') {
+            // @ts-expect-error 'Allow access to globals'
+            self.globalThis = self;
+        }
+    }
+}
+//# sourceMappingURL=polyfills.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/gotrue-js/dist/module/GoTrueClient.js
+var GoTrueClient_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+
+polyfillGlobalThis(); // Make "globalThis" available
+const DEFAULT_OPTIONS = {
+    url: GOTRUE_URL,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    multiTab: true,
+    headers: constants_DEFAULT_HEADERS,
+};
+const decodeBase64URL = (value) => {
+    try {
+        // atob is present in all browsers and nodejs >= 16
+        // but if it is not it will throw a ReferenceError in which case we can try to use Buffer
+        // replace are here to convert the Base64-URL into Base64 which is what atob supports
+        // replace with //g regex acts like replaceAll
+        return atob(value.replace(/[-]/g, '+').replace(/[_]/g, '/'));
+    }
+    catch (e) {
+        if (e instanceof ReferenceError) {
+            // running on nodejs < 16
+            // Buffer supports Base64-URL transparently
+            return Buffer.from(value, 'base64').toString('utf-8');
+        }
+        else {
+            throw e;
+        }
+    }
+};
+class GoTrueClient {
+    /**
+     * Create a new client for use in the browser.
+     * @param options.url The URL of the GoTrue server.
+     * @param options.headers Any additional headers to send to the GoTrue server.
+     * @param options.detectSessionInUrl Set to "true" if you want to automatically detects OAuth grants in the URL and signs in the user.
+     * @param options.autoRefreshToken Set to "true" if you want to automatically refresh the token before expiring.
+     * @param options.persistSession Set to "true" if you want to automatically save the user session into local storage.
+     * @param options.localStorage Provide your own local storage implementation to use instead of the browser's local storage.
+     * @param options.multiTab Set to "false" if you want to disable multi-tab/window events.
+     * @param options.cookieOptions
+     * @param options.fetch A custom fetch implementation.
+     */
+    constructor(options) {
+        this.stateChangeEmitters = new Map();
+        this.networkRetries = 0;
+        const settings = Object.assign(Object.assign({}, DEFAULT_OPTIONS), options);
+        this.currentUser = null;
+        this.currentSession = null;
+        this.autoRefreshToken = settings.autoRefreshToken;
+        this.persistSession = settings.persistSession;
+        this.multiTab = settings.multiTab;
+        this.localStorage = settings.localStorage || globalThis.localStorage;
+        this.api = new GoTrueApi({
+            url: settings.url,
+            headers: settings.headers,
+            cookieOptions: settings.cookieOptions,
+            fetch: settings.fetch,
+        });
+        this._recoverSession();
+        this._recoverAndRefresh();
+        this._listenForMultiTabEvents();
+        this._handleVisibilityChange();
+        if (settings.detectSessionInUrl && helpers_isBrowser() && !!getParameterByName('access_token')) {
+            // Handle the OAuth redirect
+            this.getSessionFromUrl({ storeSession: true }).then(({ error }) => {
+                if (error) {
+                    throw new Error('Error getting session from URL.');
+                }
+            });
+        }
+    }
+    /**
+     * Creates a new user.
+     * @type UserCredentials
+     * @param email The user's email address.
+     * @param password The user's password.
+     * @param phone The user's phone number.
+     * @param redirectTo The redirect URL attached to the signup confirmation link. Does not redirect the user if it's a mobile signup.
+     * @param data Optional user metadata.
+     */
+    signUp({ email, password, phone }, options = {}) {
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            try {
+                this._removeSession();
+                const { data, error } = phone && password
+                    ? yield this.api.signUpWithPhone(phone, password, {
+                        data: options.data,
+                        captchaToken: options.captchaToken,
+                    })
+                    : yield this.api.signUpWithEmail(email, password, {
+                        redirectTo: options.redirectTo,
+                        data: options.data,
+                        captchaToken: options.captchaToken,
+                    });
+                if (error) {
+                    throw error;
+                }
+                if (!data) {
+                    throw 'An error occurred on sign up.';
+                }
+                let session = null;
+                let user = null;
+                if (data.access_token) {
+                    session = data;
+                    user = session.user;
+                    this._saveSession(session);
+                    this._notifyAllSubscribers('SIGNED_IN');
+                }
+                if (data.id) {
+                    user = data;
+                }
+                return { user, session, error: null };
+            }
+            catch (e) {
+                return { user: null, session: null, error: e };
+            }
+        });
+    }
+    /**
+     * Log in an existing user, or login via a third-party provider.
+     * @type UserCredentials
+     * @param email The user's email address.
+     * @param phone The user's phone number.
+     * @param password The user's password.
+     * @param refreshToken A valid refresh token that was returned on login.
+     * @param provider One of the providers supported by GoTrue.
+     * @param redirectTo A URL to send the user to after they are confirmed (OAuth logins only).
+     * @param shouldCreateUser A boolean flag to indicate whether to automatically create a user on magiclink / otp sign-ins if the user doesn't exist. Defaults to true.
+     * @param scopes A space-separated list of scopes granted to the OAuth application.
+     */
+    signIn({ email, phone, password, refreshToken, provider, oidc }, options = {}) {
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            try {
+                this._removeSession();
+                if (email && !password) {
+                    const { error } = yield this.api.sendMagicLinkEmail(email, {
+                        redirectTo: options.redirectTo,
+                        shouldCreateUser: options.shouldCreateUser,
+                        captchaToken: options.captchaToken,
+                    });
+                    return { user: null, session: null, error };
+                }
+                if (email && password) {
+                    return this._handleEmailSignIn(email, password, {
+                        redirectTo: options.redirectTo,
+                        captchaToken: options.captchaToken,
+                    });
+                }
+                if (phone && !password) {
+                    const { error } = yield this.api.sendMobileOTP(phone, {
+                        shouldCreateUser: options.shouldCreateUser,
+                        captchaToken: options.captchaToken,
+                    });
+                    return { user: null, session: null, error };
+                }
+                if (phone && password) {
+                    return this._handlePhoneSignIn(phone, password);
+                }
+                if (refreshToken) {
+                    // currentSession and currentUser will be updated to latest on _callRefreshToken using the passed refreshToken
+                    const { error } = yield this._callRefreshToken(refreshToken);
+                    if (error)
+                        throw error;
+                    return {
+                        user: this.currentUser,
+                        session: this.currentSession,
+                        error: null,
+                    };
+                }
+                if (provider) {
+                    return this._handleProviderSignIn(provider, {
+                        redirectTo: options.redirectTo,
+                        scopes: options.scopes,
+                        queryParams: options.queryParams,
+                    });
+                }
+                if (oidc) {
+                    return this._handleOpenIDConnectSignIn(oidc);
+                }
+                throw new Error(`You must provide either an email, phone number, a third-party provider or OpenID Connect.`);
+            }
+            catch (e) {
+                return { user: null, session: null, error: e };
+            }
+        });
+    }
+    /**
+     * Log in a user given a User supplied OTP received via mobile.
+     * @param email The user's email address.
+     * @param phone The user's phone number.
+     * @param token The user's password.
+     * @param type The user's verification type.
+     * @param redirectTo A URL or mobile address to send the user to after they are confirmed.
+     */
+    verifyOTP(params, options = {}) {
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            try {
+                this._removeSession();
+                const { data, error } = yield this.api.verifyOTP(params, options);
+                if (error) {
+                    throw error;
+                }
+                if (!data) {
+                    throw 'An error occurred on token verification.';
+                }
+                let session = null;
+                let user = null;
+                if (data.access_token) {
+                    session = data;
+                    user = session.user;
+                    this._saveSession(session);
+                    this._notifyAllSubscribers('SIGNED_IN');
+                }
+                if (data.id) {
+                    user = data;
+                }
+                return { user, session, error: null };
+            }
+            catch (e) {
+                return { user: null, session: null, error: e };
+            }
+        });
+    }
+    /**
+     * Inside a browser context, `user()` will return the user data, if there is a logged in user.
+     *
+     * For server-side management, you can get a user through `auth.api.getUserByCookie()`
+     */
+    user() {
+        return this.currentUser;
+    }
+    /**
+     * Returns the session data, if there is an active session.
+     */
+    session() {
+        return this.currentSession;
+    }
+    /**
+     * Force refreshes the session including the user data in case it was updated in a different session.
+     */
+    refreshSession() {
+        var _a;
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            try {
+                if (!((_a = this.currentSession) === null || _a === void 0 ? void 0 : _a.access_token))
+                    throw new Error('Not logged in.');
+                // currentSession and currentUser will be updated to latest on _callRefreshToken
+                const { error } = yield this._callRefreshToken();
+                if (error)
+                    throw error;
+                return { data: this.currentSession, user: this.currentUser, error: null };
+            }
+            catch (e) {
+                return { data: null, user: null, error: e };
+            }
+        });
+    }
+    /**
+     * Updates user data, if there is a logged in user.
+     */
+    update(attributes) {
+        var _a;
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            try {
+                if (!((_a = this.currentSession) === null || _a === void 0 ? void 0 : _a.access_token))
+                    throw new Error('Not logged in.');
+                const { user, error } = yield this.api.updateUser(this.currentSession.access_token, attributes);
+                if (error)
+                    throw error;
+                if (!user)
+                    throw Error('Invalid user data.');
+                const session = Object.assign(Object.assign({}, this.currentSession), { user });
+                this._saveSession(session);
+                this._notifyAllSubscribers('USER_UPDATED');
+                return { data: user, user, error: null };
+            }
+            catch (e) {
+                return { data: null, user: null, error: e };
+            }
+        });
+    }
+    setSession(arg0) {
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            let session;
+            if (typeof arg0 === 'string') {
+                // using the refresh_token string API
+                const refresh_token = arg0;
+                const { data, error } = yield this.api.refreshAccessToken(refresh_token);
+                if (error) {
+                    return { session: null, error: error };
+                }
+                session = data;
+            }
+            else {
+                // using the object parameter API
+                const timeNow = Math.round(Date.now() / 1000);
+                let { refresh_token, access_token } = arg0;
+                let expires_at = 0;
+                let expires_in = 0;
+                const tokenParts = access_token.split('.');
+                if (tokenParts.length !== 3)
+                    throw new Error('access_token is not a proper JWT');
+                const bodyJSON = decodeBase64URL(tokenParts[1]);
+                let parsed = undefined;
+                try {
+                    parsed = JSON.parse(bodyJSON);
+                }
+                catch (e) {
+                    throw new Error('access_token is not a proper JWT, invalid JSON in body');
+                }
+                if (typeof parsed === 'object' && parsed && typeof parsed.exp === 'number') {
+                    expires_at = parsed.exp;
+                    expires_in = timeNow - parsed.exp;
+                }
+                else {
+                    throw new Error('access_token is not a proper JWT, missing exp claim');
+                }
+                if (timeNow > expires_at) {
+                    const { data, error } = yield this.api.refreshAccessToken(refresh_token);
+                    if (error) {
+                        return { session: null, error: error };
+                    }
+                    session = data;
+                }
+                else {
+                    const { user, error } = yield this.api.getUser(access_token);
+                    if (error)
+                        throw error;
+                    session = {
+                        access_token,
+                        expires_in,
+                        expires_at,
+                        refresh_token,
+                        token_type: 'bearer',
+                        user: user,
+                    };
+                }
+            }
+            try {
+                this._saveSession(session);
+                this._notifyAllSubscribers('SIGNED_IN');
+                return { session, error: null };
+            }
+            catch (e) {
+                return { error: e, session: null };
+            }
+        });
+    }
+    /**
+     * Overrides the JWT on the current client. The JWT will then be sent in all subsequent network requests.
+     * @param access_token a jwt access token
+     */
+    setAuth(access_token) {
+        this.currentSession = Object.assign(Object.assign({}, this.currentSession), { access_token, token_type: 'bearer', user: this.user() });
+        this._notifyAllSubscribers('TOKEN_REFRESHED');
+        return this.currentSession;
+    }
+    /**
+     * Gets the session data from a URL string
+     * @param options.storeSession Optionally store the session in the browser
+     */
+    getSessionFromUrl(options) {
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            try {
+                if (!helpers_isBrowser())
+                    throw new Error('No browser detected.');
+                const error_description = getParameterByName('error_description');
+                if (error_description)
+                    throw new Error(error_description);
+                const provider_token = getParameterByName('provider_token');
+                const provider_refresh_token = getParameterByName('provider_refresh_token');
+                const access_token = getParameterByName('access_token');
+                if (!access_token)
+                    throw new Error('No access_token detected.');
+                const expires_in = getParameterByName('expires_in');
+                if (!expires_in)
+                    throw new Error('No expires_in detected.');
+                const refresh_token = getParameterByName('refresh_token');
+                if (!refresh_token)
+                    throw new Error('No refresh_token detected.');
+                const token_type = getParameterByName('token_type');
+                if (!token_type)
+                    throw new Error('No token_type detected.');
+                const timeNow = Math.round(Date.now() / 1000);
+                const expires_at = timeNow + parseInt(expires_in);
+                const { user, error } = yield this.api.getUser(access_token);
+                if (error)
+                    throw error;
+                const session = {
+                    provider_token,
+                    provider_refresh_token,
+                    access_token,
+                    expires_in: parseInt(expires_in),
+                    expires_at,
+                    refresh_token,
+                    token_type,
+                    user: user,
+                };
+                if (options === null || options === void 0 ? void 0 : options.storeSession) {
+                    this._saveSession(session);
+                    const recoveryMode = getParameterByName('type');
+                    this._notifyAllSubscribers('SIGNED_IN');
+                    if (recoveryMode === 'recovery') {
+                        this._notifyAllSubscribers('PASSWORD_RECOVERY');
+                    }
+                }
+                // Remove tokens from URL
+                window.location.hash = '';
+                return { data: session, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    /**
+     * Inside a browser context, `signOut()` will remove the logged in user from the browser session
+     * and log them out - removing all items from localstorage and then trigger a "SIGNED_OUT" event.
+     *
+     * For server-side management, you can revoke all refresh tokens for a user by passing a user's JWT through to `auth.api.signOut(JWT: string)`. There is no way to revoke a user's session JWT before it automatically expires
+     */
+    signOut() {
+        var _a;
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            const accessToken = (_a = this.currentSession) === null || _a === void 0 ? void 0 : _a.access_token;
+            this._removeSession();
+            this._notifyAllSubscribers('SIGNED_OUT');
+            if (accessToken) {
+                const { error } = yield this.api.signOut(accessToken);
+                if (error)
+                    return { error };
+            }
+            return { error: null };
+        });
+    }
+    /**
+     * Receive a notification every time an auth event happens.
+     * @returns {Subscription} A subscription object which can be used to unsubscribe itself.
+     */
+    onAuthStateChange(callback) {
+        try {
+            const id = helpers_uuid();
+            const subscription = {
+                id,
+                callback,
+                unsubscribe: () => {
+                    this.stateChangeEmitters.delete(id);
+                },
+            };
+            this.stateChangeEmitters.set(id, subscription);
+            return { data: subscription, error: null };
+        }
+        catch (e) {
+            return { data: null, error: e };
+        }
+    }
+    _handleEmailSignIn(email, password, options = {}) {
+        var _a, _b;
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            try {
+                const { data, error } = yield this.api.signInWithEmail(email, password, {
+                    redirectTo: options.redirectTo,
+                    captchaToken: options.captchaToken,
+                });
+                if (error || !data)
+                    return { data: null, user: null, session: null, error };
+                if (((_a = data === null || data === void 0 ? void 0 : data.user) === null || _a === void 0 ? void 0 : _a.confirmed_at) || ((_b = data === null || data === void 0 ? void 0 : data.user) === null || _b === void 0 ? void 0 : _b.email_confirmed_at)) {
+                    this._saveSession(data);
+                    this._notifyAllSubscribers('SIGNED_IN');
+                }
+                return { data, user: data.user, session: data, error: null };
+            }
+            catch (e) {
+                return { data: null, user: null, session: null, error: e };
+            }
+        });
+    }
+    _handlePhoneSignIn(phone, password, options = {}) {
+        var _a;
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            try {
+                const { data, error } = yield this.api.signInWithPhone(phone, password, options);
+                if (error || !data)
+                    return { data: null, user: null, session: null, error };
+                if ((_a = data === null || data === void 0 ? void 0 : data.user) === null || _a === void 0 ? void 0 : _a.phone_confirmed_at) {
+                    this._saveSession(data);
+                    this._notifyAllSubscribers('SIGNED_IN');
+                }
+                return { data, user: data.user, session: data, error: null };
+            }
+            catch (e) {
+                return { data: null, user: null, session: null, error: e };
+            }
+        });
+    }
+    _handleProviderSignIn(provider, options = {}) {
+        const url = this.api.getUrlForProvider(provider, {
+            redirectTo: options.redirectTo,
+            scopes: options.scopes,
+            queryParams: options.queryParams,
+        });
+        try {
+            // try to open on the browser
+            if (helpers_isBrowser()) {
+                window.location.href = url;
+            }
+            return { provider, url, data: null, session: null, user: null, error: null };
+        }
+        catch (e) {
+            // fallback to returning the URL
+            if (url)
+                return { provider, url, data: null, session: null, user: null, error: null };
+            return { data: null, user: null, session: null, error: e };
+        }
+    }
+    _handleOpenIDConnectSignIn({ id_token, nonce, client_id, issuer, provider, }) {
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            if (id_token && nonce && ((client_id && issuer) || provider)) {
+                try {
+                    const { data, error } = yield this.api.signInWithOpenIDConnect({
+                        id_token,
+                        nonce,
+                        client_id,
+                        issuer,
+                        provider,
+                    });
+                    if (error || !data)
+                        return { user: null, session: null, error };
+                    this._saveSession(data);
+                    this._notifyAllSubscribers('SIGNED_IN');
+                    return { user: data.user, session: data, error: null };
+                }
+                catch (e) {
+                    return { user: null, session: null, error: e };
+                }
+            }
+            throw new Error(`You must provide a OpenID Connect provider with your id token and nonce.`);
+        });
+    }
+    /**
+     * Attempts to get the session from LocalStorage
+     * Note: this should never be async (even for React Native), as we need it to return immediately in the constructor.
+     */
+    _recoverSession() {
+        try {
+            const data = getItemSynchronously(this.localStorage, constants_STORAGE_KEY);
+            if (!data)
+                return null;
+            const { currentSession, expiresAt } = data;
+            const timeNow = Math.round(Date.now() / 1000);
+            if (expiresAt >= timeNow + EXPIRY_MARGIN && (currentSession === null || currentSession === void 0 ? void 0 : currentSession.user)) {
+                this._saveSession(currentSession);
+                this._notifyAllSubscribers('SIGNED_IN');
+            }
+        }
+        catch (error) {
+            console.log('error', error);
+        }
+    }
+    /**
+     * Recovers the session from LocalStorage and refreshes
+     * Note: this method is async to accommodate for AsyncStorage e.g. in React native.
+     */
+    _recoverAndRefresh() {
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield getItemAsync(this.localStorage, constants_STORAGE_KEY);
+                if (!data)
+                    return null;
+                const { currentSession, expiresAt } = data;
+                const timeNow = Math.round(Date.now() / 1000);
+                if (expiresAt < timeNow + EXPIRY_MARGIN) {
+                    if (this.autoRefreshToken && currentSession.refresh_token) {
+                        this.networkRetries++;
+                        const { error } = yield this._callRefreshToken(currentSession.refresh_token);
+                        if (error) {
+                            console.log(error.message);
+                            if (error.message === NETWORK_FAILURE.ERROR_MESSAGE &&
+                                this.networkRetries < NETWORK_FAILURE.MAX_RETRIES) {
+                                if (this.refreshTokenTimer)
+                                    clearTimeout(this.refreshTokenTimer);
+                                this.refreshTokenTimer = setTimeout(() => this._recoverAndRefresh(), Math.pow(NETWORK_FAILURE.RETRY_INTERVAL, this.networkRetries) * 100 // exponential backoff
+                                );
+                                return;
+                            }
+                            yield this._removeSession();
+                        }
+                        this.networkRetries = 0;
+                    }
+                    else {
+                        this._removeSession();
+                    }
+                }
+                else if (!currentSession) {
+                    console.log('Current session is missing data.');
+                    this._removeSession();
+                }
+                else {
+                    // should be handled on _recoverSession method already
+                    // But we still need the code here to accommodate for AsyncStorage e.g. in React native
+                    this._saveSession(currentSession);
+                    this._notifyAllSubscribers('SIGNED_IN');
+                }
+            }
+            catch (err) {
+                console.error(err);
+                return null;
+            }
+        });
+    }
+    _callRefreshToken(refresh_token) {
+        var _a;
+        if (refresh_token === void 0) { refresh_token = (_a = this.currentSession) === null || _a === void 0 ? void 0 : _a.refresh_token; }
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            try {
+                if (!refresh_token) {
+                    throw new Error('No current session.');
+                }
+                const { data, error } = yield this.api.refreshAccessToken(refresh_token);
+                if (error)
+                    throw error;
+                if (!data)
+                    throw Error('Invalid session data.');
+                this._saveSession(data);
+                this._notifyAllSubscribers('TOKEN_REFRESHED');
+                this._notifyAllSubscribers('SIGNED_IN');
+                return { data, error: null };
+            }
+            catch (e) {
+                return { data: null, error: e };
+            }
+        });
+    }
+    _notifyAllSubscribers(event) {
+        this.stateChangeEmitters.forEach((x) => x.callback(event, this.currentSession));
+    }
+    /**
+     * set currentSession and currentUser
+     * process to _startAutoRefreshToken if possible
+     */
+    _saveSession(session) {
+        this.currentSession = session;
+        this.currentUser = session.user;
+        const expiresAt = session.expires_at;
+        if (expiresAt) {
+            const timeNow = Math.round(Date.now() / 1000);
+            const expiresIn = expiresAt - timeNow;
+            const refreshDurationBeforeExpires = expiresIn > EXPIRY_MARGIN ? EXPIRY_MARGIN : 0.5;
+            this._startAutoRefreshToken((expiresIn - refreshDurationBeforeExpires) * 1000);
+        }
+        // Do we need any extra check before persist session
+        // access_token or user ?
+        if (this.persistSession && session.expires_at) {
+            this._persistSession(this.currentSession);
+        }
+    }
+    _persistSession(currentSession) {
+        const data = { currentSession, expiresAt: currentSession.expires_at };
+        setItemAsync(this.localStorage, constants_STORAGE_KEY, data);
+    }
+    _removeSession() {
+        return GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            this.currentSession = null;
+            this.currentUser = null;
+            if (this.refreshTokenTimer)
+                clearTimeout(this.refreshTokenTimer);
+            removeItemAsync(this.localStorage, constants_STORAGE_KEY);
+        });
+    }
+    /**
+     * Clear and re-create refresh token timer
+     * @param value time intervals in milliseconds
+     */
+    _startAutoRefreshToken(value) {
+        if (this.refreshTokenTimer)
+            clearTimeout(this.refreshTokenTimer);
+        if (value <= 0 || !this.autoRefreshToken)
+            return;
+        this.refreshTokenTimer = setTimeout(() => GoTrueClient_awaiter(this, void 0, void 0, function* () {
+            this.networkRetries++;
+            const { error } = yield this._callRefreshToken();
+            if (!error)
+                this.networkRetries = 0;
+            if ((error === null || error === void 0 ? void 0 : error.message) === NETWORK_FAILURE.ERROR_MESSAGE &&
+                this.networkRetries < NETWORK_FAILURE.MAX_RETRIES)
+                this._startAutoRefreshToken(Math.pow(NETWORK_FAILURE.RETRY_INTERVAL, this.networkRetries) * 100); // exponential backoff
+        }), value);
+        if (typeof this.refreshTokenTimer.unref === 'function')
+            this.refreshTokenTimer.unref();
+    }
+    /**
+     * Listens for changes to LocalStorage and updates the current session.
+     */
+    _listenForMultiTabEvents() {
+        if (!this.multiTab || !helpers_isBrowser() || !(window === null || window === void 0 ? void 0 : window.addEventListener)) {
+            return false;
+        }
+        try {
+            window === null || window === void 0 ? void 0 : window.addEventListener('storage', (e) => {
+                var _a;
+                if (e.key === constants_STORAGE_KEY) {
+                    const newSession = JSON.parse(String(e.newValue));
+                    if ((_a = newSession === null || newSession === void 0 ? void 0 : newSession.currentSession) === null || _a === void 0 ? void 0 : _a.access_token) {
+                        this._saveSession(newSession.currentSession);
+                        this._notifyAllSubscribers('SIGNED_IN');
+                    }
+                    else {
+                        this._removeSession();
+                        this._notifyAllSubscribers('SIGNED_OUT');
+                    }
+                }
+            });
+        }
+        catch (error) {
+            console.error('_listenForMultiTabEvents', error);
+        }
+    }
+    _handleVisibilityChange() {
+        if (!this.multiTab || !helpers_isBrowser() || !(window === null || window === void 0 ? void 0 : window.addEventListener)) {
+            return false;
+        }
+        try {
+            window === null || window === void 0 ? void 0 : window.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    this._recoverAndRefresh();
+                }
+            });
+        }
+        catch (error) {
+            console.error('_handleVisibilityChange', error);
+        }
+    }
+}
+//# sourceMappingURL=GoTrueClient.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/gotrue-js/dist/module/index.js
+
+
+
+
+//# sourceMappingURL=index.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/supabase-js/dist/module/lib/SupabaseAuthClient.js
+
+class SupabaseAuthClient extends GoTrueClient {
+    constructor(options) {
+        super(options);
+    }
+}
+//# sourceMappingURL=SupabaseAuthClient.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/postgrest-js/dist/module/lib/types.js
+var types_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+class PostgrestBuilder {
+    constructor(builder) {
+        Object.assign(this, builder);
+        let _fetch;
+        if (builder.fetch) {
+            _fetch = builder.fetch;
+        }
+        else if (typeof fetch === 'undefined') {
+            _fetch = (...args) => types_awaiter(this, void 0, void 0, function* () { return yield (yield __webpack_require__.e(/* import() */ 165).then(__webpack_require__.t.bind(__webpack_require__, 4165, 23))).fetch(...args); });
+        }
+        else {
+            _fetch = fetch;
+        }
+        this.fetch = (...args) => _fetch(...args);
+        this.shouldThrowOnError = builder.shouldThrowOnError || false;
+        this.allowEmpty = builder.allowEmpty || false;
+    }
+    /**
+     * If there's an error with the query, throwOnError will reject the promise by
+     * throwing the error instead of returning it as part of a successful response.
+     *
+     * {@link https://github.com/supabase/supabase-js/issues/92}
+     */
+    throwOnError(throwOnError) {
+        if (throwOnError === null || throwOnError === undefined) {
+            throwOnError = true;
+        }
+        this.shouldThrowOnError = throwOnError;
+        return this;
+    }
+    then(onfulfilled, onrejected) {
+        // https://postgrest.org/en/stable/api.html#switching-schemas
+        if (typeof this.schema === 'undefined') {
+            // skip
+        }
+        else if (['GET', 'HEAD'].includes(this.method)) {
+            this.headers['Accept-Profile'] = this.schema;
+        }
+        else {
+            this.headers['Content-Profile'] = this.schema;
+        }
+        if (this.method !== 'GET' && this.method !== 'HEAD') {
+            this.headers['Content-Type'] = 'application/json';
+        }
+        let res = this.fetch(this.url.toString(), {
+            method: this.method,
+            headers: this.headers,
+            body: JSON.stringify(this.body),
+            signal: this.signal,
+        }).then((res) => types_awaiter(this, void 0, void 0, function* () {
+            var _a, _b, _c, _d;
+            let error = null;
+            let data = null;
+            let count = null;
+            let status = res.status;
+            let statusText = res.statusText;
+            if (res.ok) {
+                const isReturnMinimal = (_a = this.headers['Prefer']) === null || _a === void 0 ? void 0 : _a.split(',').includes('return=minimal');
+                if (this.method !== 'HEAD' && !isReturnMinimal) {
+                    const text = yield res.text();
+                    if (!text) {
+                        // discard `text`
+                    }
+                    else if (this.headers['Accept'] === 'text/csv') {
+                        data = text;
+                    }
+                    else {
+                        data = JSON.parse(text);
+                    }
+                }
+                const countHeader = (_b = this.headers['Prefer']) === null || _b === void 0 ? void 0 : _b.match(/count=(exact|planned|estimated)/);
+                const contentRange = (_c = res.headers.get('content-range')) === null || _c === void 0 ? void 0 : _c.split('/');
+                if (countHeader && contentRange && contentRange.length > 1) {
+                    count = parseInt(contentRange[1]);
+                }
+            }
+            else {
+                const body = yield res.text();
+                try {
+                    error = JSON.parse(body);
+                }
+                catch (_e) {
+                    error = {
+                        message: body,
+                    };
+                }
+                if (error && this.allowEmpty && ((_d = error === null || error === void 0 ? void 0 : error.details) === null || _d === void 0 ? void 0 : _d.includes('Results contain 0 rows'))) {
+                    error = null;
+                    status = 200;
+                    statusText = 'OK';
+                }
+                if (error && this.shouldThrowOnError) {
+                    throw error;
+                }
+            }
+            const postgrestResponse = {
+                error,
+                data,
+                count,
+                status,
+                statusText,
+                body: data,
+            };
+            return postgrestResponse;
+        }));
+        if (!this.shouldThrowOnError) {
+            res = res.catch((fetchError) => ({
+                error: {
+                    message: `FetchError: ${fetchError.message}`,
+                    details: '',
+                    hint: '',
+                    code: fetchError.code || '',
+                },
+                data: null,
+                body: null,
+                count: null,
+                status: 400,
+                statusText: 'Bad Request',
+            }));
+        }
+        return res.then(onfulfilled, onrejected);
+    }
+}
+//# sourceMappingURL=types.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/postgrest-js/dist/module/lib/PostgrestTransformBuilder.js
+
+/**
+ * Post-filters (transforms)
+ */
+class PostgrestTransformBuilder extends PostgrestBuilder {
+    /**
+     * Performs vertical filtering with SELECT.
+     *
+     * @param columns  The columns to retrieve, separated by commas.
+     */
+    select(columns = '*') {
+        // Remove whitespaces except when quoted
+        let quoted = false;
+        const cleanedColumns = columns
+            .split('')
+            .map((c) => {
+            if (/\s/.test(c) && !quoted) {
+                return '';
+            }
+            if (c === '"') {
+                quoted = !quoted;
+            }
+            return c;
+        })
+            .join('');
+        this.url.searchParams.set('select', cleanedColumns);
+        return this;
+    }
+    /**
+     * Orders the result with the specified `column`.
+     *
+     * @param column  The column to order on.
+     * @param ascending  If `true`, the result will be in ascending order.
+     * @param nullsFirst  If `true`, `null`s appear first.
+     * @param foreignTable  The foreign table to use (if `column` is a foreign column).
+     */
+    order(column, { ascending = true, nullsFirst = false, foreignTable, } = {}) {
+        const key = typeof foreignTable === 'undefined' ? 'order' : `${foreignTable}.order`;
+        const existingOrder = this.url.searchParams.get(key);
+        this.url.searchParams.set(key, `${existingOrder ? `${existingOrder},` : ''}${column}.${ascending ? 'asc' : 'desc'}.${nullsFirst ? 'nullsfirst' : 'nullslast'}`);
+        return this;
+    }
+    /**
+     * Limits the result with the specified `count`.
+     *
+     * @param count  The maximum no. of rows to limit to.
+     * @param foreignTable  The foreign table to use (for foreign columns).
+     */
+    limit(count, { foreignTable } = {}) {
+        const key = typeof foreignTable === 'undefined' ? 'limit' : `${foreignTable}.limit`;
+        this.url.searchParams.set(key, `${count}`);
+        return this;
+    }
+    /**
+     * Limits the result to rows within the specified range, inclusive.
+     *
+     * @param from  The starting index from which to limit the result, inclusive.
+     * @param to  The last index to which to limit the result, inclusive.
+     * @param foreignTable  The foreign table to use (for foreign columns).
+     */
+    range(from, to, { foreignTable } = {}) {
+        const keyOffset = typeof foreignTable === 'undefined' ? 'offset' : `${foreignTable}.offset`;
+        const keyLimit = typeof foreignTable === 'undefined' ? 'limit' : `${foreignTable}.limit`;
+        this.url.searchParams.set(keyOffset, `${from}`);
+        // Range is inclusive, so add 1
+        this.url.searchParams.set(keyLimit, `${to - from + 1}`);
+        return this;
+    }
+    /**
+     * Sets the AbortSignal for the fetch request.
+     */
+    abortSignal(signal) {
+        this.signal = signal;
+        return this;
+    }
+    /**
+     * Retrieves only one row from the result. Result must be one row (e.g. using
+     * `limit`), otherwise this will result in an error.
+     */
+    single() {
+        this.headers['Accept'] = 'application/vnd.pgrst.object+json';
+        return this;
+    }
+    /**
+     * Retrieves at most one row from the result. Result must be at most one row
+     * (e.g. using `eq` on a UNIQUE column), otherwise this will result in an
+     * error.
+     */
+    maybeSingle() {
+        this.headers['Accept'] = 'application/vnd.pgrst.object+json';
+        this.allowEmpty = true;
+        return this;
+    }
+    /**
+     * Set the response type to CSV.
+     */
+    csv() {
+        this.headers['Accept'] = 'text/csv';
+        return this;
+    }
+}
+//# sourceMappingURL=PostgrestTransformBuilder.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/postgrest-js/dist/module/lib/PostgrestFilterBuilder.js
+
+class PostgrestFilterBuilder extends PostgrestTransformBuilder {
+    constructor() {
+        super(...arguments);
+        /** @deprecated Use `contains()` instead. */
+        this.cs = this.contains;
+        /** @deprecated Use `containedBy()` instead. */
+        this.cd = this.containedBy;
+        /** @deprecated Use `rangeLt()` instead. */
+        this.sl = this.rangeLt;
+        /** @deprecated Use `rangeGt()` instead. */
+        this.sr = this.rangeGt;
+        /** @deprecated Use `rangeGte()` instead. */
+        this.nxl = this.rangeGte;
+        /** @deprecated Use `rangeLte()` instead. */
+        this.nxr = this.rangeLte;
+        /** @deprecated Use `rangeAdjacent()` instead. */
+        this.adj = this.rangeAdjacent;
+        /** @deprecated Use `overlaps()` instead. */
+        this.ov = this.overlaps;
+    }
+    /**
+     * Finds all rows which doesn't satisfy the filter.
+     *
+     * @param column  The column to filter on.
+     * @param operator  The operator to filter with.
+     * @param value  The value to filter with.
+     */
+    not(column, operator, value) {
+        this.url.searchParams.append(`${column}`, `not.${operator}.${value}`);
+        return this;
+    }
+    /**
+     * Finds all rows satisfying at least one of the filters.
+     *
+     * @param filters  The filters to use, separated by commas.
+     * @param foreignTable  The foreign table to use (if `column` is a foreign column).
+     */
+    or(filters, { foreignTable } = {}) {
+        const key = typeof foreignTable === 'undefined' ? 'or' : `${foreignTable}.or`;
+        this.url.searchParams.append(key, `(${filters})`);
+        return this;
+    }
+    /**
+     * Finds all rows whose value on the stated `column` exactly matches the
+     * specified `value`.
+     *
+     * @param column  The column to filter on.
+     * @param value  The value to filter with.
+     */
+    eq(column, value) {
+        this.url.searchParams.append(`${column}`, `eq.${value}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose value on the stated `column` doesn't match the
+     * specified `value`.
+     *
+     * @param column  The column to filter on.
+     * @param value  The value to filter with.
+     */
+    neq(column, value) {
+        this.url.searchParams.append(`${column}`, `neq.${value}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose value on the stated `column` is greater than the
+     * specified `value`.
+     *
+     * @param column  The column to filter on.
+     * @param value  The value to filter with.
+     */
+    gt(column, value) {
+        this.url.searchParams.append(`${column}`, `gt.${value}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose value on the stated `column` is greater than or
+     * equal to the specified `value`.
+     *
+     * @param column  The column to filter on.
+     * @param value  The value to filter with.
+     */
+    gte(column, value) {
+        this.url.searchParams.append(`${column}`, `gte.${value}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose value on the stated `column` is less than the
+     * specified `value`.
+     *
+     * @param column  The column to filter on.
+     * @param value  The value to filter with.
+     */
+    lt(column, value) {
+        this.url.searchParams.append(`${column}`, `lt.${value}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose value on the stated `column` is less than or equal
+     * to the specified `value`.
+     *
+     * @param column  The column to filter on.
+     * @param value  The value to filter with.
+     */
+    lte(column, value) {
+        this.url.searchParams.append(`${column}`, `lte.${value}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose value in the stated `column` matches the supplied
+     * `pattern` (case sensitive).
+     *
+     * @param column  The column to filter on.
+     * @param pattern  The pattern to filter with.
+     */
+    like(column, pattern) {
+        this.url.searchParams.append(`${column}`, `like.${pattern}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose value in the stated `column` matches the supplied
+     * `pattern` (case insensitive).
+     *
+     * @param column  The column to filter on.
+     * @param pattern  The pattern to filter with.
+     */
+    ilike(column, pattern) {
+        this.url.searchParams.append(`${column}`, `ilike.${pattern}`);
+        return this;
+    }
+    /**
+     * A check for exact equality (null, true, false), finds all rows whose
+     * value on the stated `column` exactly match the specified `value`.
+     *
+     * @param column  The column to filter on.
+     * @param value  The value to filter with.
+     */
+    is(column, value) {
+        this.url.searchParams.append(`${column}`, `is.${value}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose value on the stated `column` is found on the
+     * specified `values`.
+     *
+     * @param column  The column to filter on.
+     * @param values  The values to filter with.
+     */
+    in(column, values) {
+        const cleanedValues = values
+            .map((s) => {
+            // handle postgrest reserved characters
+            // https://postgrest.org/en/v7.0.0/api.html#reserved-characters
+            if (typeof s === 'string' && new RegExp('[,()]').test(s))
+                return `"${s}"`;
+            else
+                return `${s}`;
+        })
+            .join(',');
+        this.url.searchParams.append(`${column}`, `in.(${cleanedValues})`);
+        return this;
+    }
+    /**
+     * Finds all rows whose json, array, or range value on the stated `column`
+     * contains the values specified in `value`.
+     *
+     * @param column  The column to filter on.
+     * @param value  The value to filter with.
+     */
+    contains(column, value) {
+        if (typeof value === 'string') {
+            // range types can be inclusive '[', ']' or exclusive '(', ')' so just
+            // keep it simple and accept a string
+            this.url.searchParams.append(`${column}`, `cs.${value}`);
+        }
+        else if (Array.isArray(value)) {
+            // array
+            this.url.searchParams.append(`${column}`, `cs.{${value.join(',')}}`);
+        }
+        else {
+            // json
+            this.url.searchParams.append(`${column}`, `cs.${JSON.stringify(value)}`);
+        }
+        return this;
+    }
+    /**
+     * Finds all rows whose json, array, or range value on the stated `column` is
+     * contained by the specified `value`.
+     *
+     * @param column  The column to filter on.
+     * @param value  The value to filter with.
+     */
+    containedBy(column, value) {
+        if (typeof value === 'string') {
+            // range
+            this.url.searchParams.append(`${column}`, `cd.${value}`);
+        }
+        else if (Array.isArray(value)) {
+            // array
+            this.url.searchParams.append(`${column}`, `cd.{${value.join(',')}}`);
+        }
+        else {
+            // json
+            this.url.searchParams.append(`${column}`, `cd.${JSON.stringify(value)}`);
+        }
+        return this;
+    }
+    /**
+     * Finds all rows whose range value on the stated `column` is strictly to the
+     * left of the specified `range`.
+     *
+     * @param column  The column to filter on.
+     * @param range  The range to filter with.
+     */
+    rangeLt(column, range) {
+        this.url.searchParams.append(`${column}`, `sl.${range}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose range value on the stated `column` is strictly to
+     * the right of the specified `range`.
+     *
+     * @param column  The column to filter on.
+     * @param range  The range to filter with.
+     */
+    rangeGt(column, range) {
+        this.url.searchParams.append(`${column}`, `sr.${range}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose range value on the stated `column` does not extend
+     * to the left of the specified `range`.
+     *
+     * @param column  The column to filter on.
+     * @param range  The range to filter with.
+     */
+    rangeGte(column, range) {
+        this.url.searchParams.append(`${column}`, `nxl.${range}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose range value on the stated `column` does not extend
+     * to the right of the specified `range`.
+     *
+     * @param column  The column to filter on.
+     * @param range  The range to filter with.
+     */
+    rangeLte(column, range) {
+        this.url.searchParams.append(`${column}`, `nxr.${range}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose range value on the stated `column` is adjacent to
+     * the specified `range`.
+     *
+     * @param column  The column to filter on.
+     * @param range  The range to filter with.
+     */
+    rangeAdjacent(column, range) {
+        this.url.searchParams.append(`${column}`, `adj.${range}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose array or range value on the stated `column` overlaps
+     * (has a value in common) with the specified `value`.
+     *
+     * @param column  The column to filter on.
+     * @param value  The value to filter with.
+     */
+    overlaps(column, value) {
+        if (typeof value === 'string') {
+            // range
+            this.url.searchParams.append(`${column}`, `ov.${value}`);
+        }
+        else {
+            // array
+            this.url.searchParams.append(`${column}`, `ov.{${value.join(',')}}`);
+        }
+        return this;
+    }
+    /**
+     * Finds all rows whose text or tsvector value on the stated `column` matches
+     * the tsquery in `query`.
+     *
+     * @param column  The column to filter on.
+     * @param query  The Postgres tsquery string to filter with.
+     * @param config  The text search configuration to use.
+     * @param type  The type of tsquery conversion to use on `query`.
+     */
+    textSearch(column, query, { config, type = null, } = {}) {
+        let typePart = '';
+        if (type === 'plain') {
+            typePart = 'pl';
+        }
+        else if (type === 'phrase') {
+            typePart = 'ph';
+        }
+        else if (type === 'websearch') {
+            typePart = 'w';
+        }
+        const configPart = config === undefined ? '' : `(${config})`;
+        this.url.searchParams.append(`${column}`, `${typePart}fts${configPart}.${query}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose tsvector value on the stated `column` matches
+     * to_tsquery(`query`).
+     *
+     * @param column  The column to filter on.
+     * @param query  The Postgres tsquery string to filter with.
+     * @param config  The text search configuration to use.
+     *
+     * @deprecated Use `textSearch()` instead.
+     */
+    fts(column, query, { config } = {}) {
+        const configPart = typeof config === 'undefined' ? '' : `(${config})`;
+        this.url.searchParams.append(`${column}`, `fts${configPart}.${query}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose tsvector value on the stated `column` matches
+     * plainto_tsquery(`query`).
+     *
+     * @param column  The column to filter on.
+     * @param query  The Postgres tsquery string to filter with.
+     * @param config  The text search configuration to use.
+     *
+     * @deprecated Use `textSearch()` with `type: 'plain'` instead.
+     */
+    plfts(column, query, { config } = {}) {
+        const configPart = typeof config === 'undefined' ? '' : `(${config})`;
+        this.url.searchParams.append(`${column}`, `plfts${configPart}.${query}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose tsvector value on the stated `column` matches
+     * phraseto_tsquery(`query`).
+     *
+     * @param column  The column to filter on.
+     * @param query  The Postgres tsquery string to filter with.
+     * @param config  The text search configuration to use.
+     *
+     * @deprecated Use `textSearch()` with `type: 'phrase'` instead.
+     */
+    phfts(column, query, { config } = {}) {
+        const configPart = typeof config === 'undefined' ? '' : `(${config})`;
+        this.url.searchParams.append(`${column}`, `phfts${configPart}.${query}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose tsvector value on the stated `column` matches
+     * websearch_to_tsquery(`query`).
+     *
+     * @param column  The column to filter on.
+     * @param query  The Postgres tsquery string to filter with.
+     * @param config  The text search configuration to use.
+     *
+     * @deprecated Use `textSearch()` with `type: 'websearch'` instead.
+     */
+    wfts(column, query, { config } = {}) {
+        const configPart = typeof config === 'undefined' ? '' : `(${config})`;
+        this.url.searchParams.append(`${column}`, `wfts${configPart}.${query}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose `column` satisfies the filter.
+     *
+     * @param column  The column to filter on.
+     * @param operator  The operator to filter with.
+     * @param value  The value to filter with.
+     */
+    filter(column, operator, value) {
+        this.url.searchParams.append(`${column}`, `${operator}.${value}`);
+        return this;
+    }
+    /**
+     * Finds all rows whose columns match the specified `query` object.
+     *
+     * @param query  The object to filter with, with column names as keys mapped
+     *               to their filter values.
+     */
+    match(query) {
+        Object.keys(query).forEach((key) => {
+            this.url.searchParams.append(`${key}`, `eq.${query[key]}`);
+        });
+        return this;
+    }
+}
+//# sourceMappingURL=PostgrestFilterBuilder.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/postgrest-js/dist/module/lib/PostgrestQueryBuilder.js
+
+
+class PostgrestQueryBuilder extends PostgrestBuilder {
+    constructor(url, { headers = {}, schema, fetch, shouldThrowOnError, } = {}) {
+        super({ fetch, shouldThrowOnError });
+        this.url = new URL(url);
+        this.headers = Object.assign({}, headers);
+        this.schema = schema;
+    }
+    /**
+     * Performs vertical filtering with SELECT.
+     *
+     * @param columns  The columns to retrieve, separated by commas.
+     * @param head  When set to true, select will void data.
+     * @param count  Count algorithm to use to count rows in a table.
+     */
+    select(columns = '*', { head = false, count = null, } = {}) {
+        this.method = 'GET';
+        // Remove whitespaces except when quoted
+        let quoted = false;
+        const cleanedColumns = columns
+            .split('')
+            .map((c) => {
+            if (/\s/.test(c) && !quoted) {
+                return '';
+            }
+            if (c === '"') {
+                quoted = !quoted;
+            }
+            return c;
+        })
+            .join('');
+        this.url.searchParams.set('select', cleanedColumns);
+        if (count) {
+            this.headers['Prefer'] = `count=${count}`;
+        }
+        if (head) {
+            this.method = 'HEAD';
+        }
+        return new PostgrestFilterBuilder(this);
+    }
+    insert(values, { upsert = false, onConflict, returning = 'representation', count = null, } = {}) {
+        this.method = 'POST';
+        const prefersHeaders = [`return=${returning}`];
+        if (upsert)
+            prefersHeaders.push('resolution=merge-duplicates');
+        if (upsert && onConflict !== undefined)
+            this.url.searchParams.set('on_conflict', onConflict);
+        this.body = values;
+        if (count) {
+            prefersHeaders.push(`count=${count}`);
+        }
+        if (this.headers['Prefer']) {
+            prefersHeaders.unshift(this.headers['Prefer']);
+        }
+        this.headers['Prefer'] = prefersHeaders.join(',');
+        if (Array.isArray(values)) {
+            const columns = values.reduce((acc, x) => acc.concat(Object.keys(x)), []);
+            if (columns.length > 0) {
+                const uniqueColumns = [...new Set(columns)].map((column) => `"${column}"`);
+                this.url.searchParams.set('columns', uniqueColumns.join(','));
+            }
+        }
+        return new PostgrestFilterBuilder(this);
+    }
+    /**
+     * Performs an UPSERT into the table.
+     *
+     * @param values  The values to insert.
+     * @param onConflict  By specifying the `on_conflict` query parameter, you can make UPSERT work on a column(s) that has a UNIQUE constraint.
+     * @param returning  By default the new record is returned. Set this to 'minimal' if you don't need this value.
+     * @param count  Count algorithm to use to count rows in a table.
+     * @param ignoreDuplicates  Specifies if duplicate rows should be ignored and not inserted.
+     */
+    upsert(values, { onConflict, returning = 'representation', count = null, ignoreDuplicates = false, } = {}) {
+        this.method = 'POST';
+        const prefersHeaders = [
+            `resolution=${ignoreDuplicates ? 'ignore' : 'merge'}-duplicates`,
+            `return=${returning}`,
+        ];
+        if (onConflict !== undefined)
+            this.url.searchParams.set('on_conflict', onConflict);
+        this.body = values;
+        if (count) {
+            prefersHeaders.push(`count=${count}`);
+        }
+        if (this.headers['Prefer']) {
+            prefersHeaders.unshift(this.headers['Prefer']);
+        }
+        this.headers['Prefer'] = prefersHeaders.join(',');
+        return new PostgrestFilterBuilder(this);
+    }
+    /**
+     * Performs an UPDATE on the table.
+     *
+     * @param values  The values to update.
+     * @param returning  By default the updated record is returned. Set this to 'minimal' if you don't need this value.
+     * @param count  Count algorithm to use to count rows in a table.
+     */
+    update(values, { returning = 'representation', count = null, } = {}) {
+        this.method = 'PATCH';
+        const prefersHeaders = [`return=${returning}`];
+        this.body = values;
+        if (count) {
+            prefersHeaders.push(`count=${count}`);
+        }
+        if (this.headers['Prefer']) {
+            prefersHeaders.unshift(this.headers['Prefer']);
+        }
+        this.headers['Prefer'] = prefersHeaders.join(',');
+        return new PostgrestFilterBuilder(this);
+    }
+    /**
+     * Performs a DELETE on the table.
+     *
+     * @param returning  If `true`, return the deleted row(s) in the response.
+     * @param count  Count algorithm to use to count rows in a table.
+     */
+    delete({ returning = 'representation', count = null, } = {}) {
+        this.method = 'DELETE';
+        const prefersHeaders = [`return=${returning}`];
+        if (count) {
+            prefersHeaders.push(`count=${count}`);
+        }
+        if (this.headers['Prefer']) {
+            prefersHeaders.unshift(this.headers['Prefer']);
+        }
+        this.headers['Prefer'] = prefersHeaders.join(',');
+        return new PostgrestFilterBuilder(this);
+    }
+}
+//# sourceMappingURL=PostgrestQueryBuilder.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/postgrest-js/dist/module/lib/PostgrestRpcBuilder.js
+
+
+class PostgrestRpcBuilder extends PostgrestBuilder {
+    constructor(url, { headers = {}, schema, fetch, shouldThrowOnError, } = {}) {
+        super({ fetch, shouldThrowOnError });
+        this.url = new URL(url);
+        this.headers = Object.assign({}, headers);
+        this.schema = schema;
+    }
+    /**
+     * Perform a function call.
+     */
+    rpc(params, { head = false, count = null, } = {}) {
+        if (head) {
+            this.method = 'HEAD';
+            if (params) {
+                Object.entries(params).forEach(([name, value]) => {
+                    this.url.searchParams.append(name, value);
+                });
+            }
+        }
+        else {
+            this.method = 'POST';
+            this.body = params;
+        }
+        if (count) {
+            if (this.headers['Prefer'] !== undefined)
+                this.headers['Prefer'] += `,count=${count}`;
+            else
+                this.headers['Prefer'] = `count=${count}`;
+        }
+        return new PostgrestFilterBuilder(this);
+    }
+}
+//# sourceMappingURL=PostgrestRpcBuilder.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/postgrest-js/dist/module/lib/version.js
+// generated by genversion
+const lib_version_version = '0.37.4';
+//# sourceMappingURL=version.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/postgrest-js/dist/module/lib/constants.js
+
+const lib_constants_DEFAULT_HEADERS = { 'X-Client-Info': `postgrest-js/${lib_version_version}` };
+//# sourceMappingURL=constants.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/postgrest-js/dist/module/PostgrestClient.js
+
+
+
+class PostgrestClient {
+    /**
+     * Creates a PostgREST client.
+     *
+     * @param url  URL of the PostgREST endpoint.
+     * @param headers  Custom headers.
+     * @param schema  Postgres schema to switch to.
+     */
+    constructor(url, { headers = {}, schema, fetch, throwOnError, } = {}) {
+        this.url = url;
+        this.headers = Object.assign(Object.assign({}, lib_constants_DEFAULT_HEADERS), headers);
+        this.schema = schema;
+        this.fetch = fetch;
+        this.shouldThrowOnError = throwOnError;
+    }
+    /**
+     * Authenticates the request with JWT.
+     *
+     * @param token  The JWT token to use.
+     */
+    auth(token) {
+        this.headers['Authorization'] = `Bearer ${token}`;
+        return this;
+    }
+    /**
+     * Perform a table operation.
+     *
+     * @param table  The table name to operate on.
+     */
+    from(table) {
+        const url = `${this.url}/${table}`;
+        return new PostgrestQueryBuilder(url, {
+            headers: this.headers,
+            schema: this.schema,
+            fetch: this.fetch,
+            shouldThrowOnError: this.shouldThrowOnError,
+        });
+    }
+    /**
+     * Perform a function call.
+     *
+     * @param fn  The function name to call.
+     * @param params  The parameters to pass to the function call.
+     * @param head  When set to true, no data will be returned.
+     * @param count  Count algorithm to use to count rows in a table.
+     */
+    rpc(fn, params, { head = false, count = null, } = {}) {
+        const url = `${this.url}/rpc/${fn}`;
+        return new PostgrestRpcBuilder(url, {
+            headers: this.headers,
+            schema: this.schema,
+            fetch: this.fetch,
+            shouldThrowOnError: this.shouldThrowOnError,
+        }).rpc(params, { head, count });
+    }
+}
+//# sourceMappingURL=PostgrestClient.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/postgrest-js/dist/module/index.js
+
+
+
+
+
+//# sourceMappingURL=index.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/realtime-js/dist/module/lib/transformers.js
+/**
+ * Helpers to convert the change Payload into native JS types.
+ */
+// Adapted from epgsql (src/epgsql_binary.erl), this module licensed under
+// 3-clause BSD found here: https://raw.githubusercontent.com/epgsql/epgsql/devel/LICENSE
+var PostgresTypes;
+(function (PostgresTypes) {
+    PostgresTypes["abstime"] = "abstime";
+    PostgresTypes["bool"] = "bool";
+    PostgresTypes["date"] = "date";
+    PostgresTypes["daterange"] = "daterange";
+    PostgresTypes["float4"] = "float4";
+    PostgresTypes["float8"] = "float8";
+    PostgresTypes["int2"] = "int2";
+    PostgresTypes["int4"] = "int4";
+    PostgresTypes["int4range"] = "int4range";
+    PostgresTypes["int8"] = "int8";
+    PostgresTypes["int8range"] = "int8range";
+    PostgresTypes["json"] = "json";
+    PostgresTypes["jsonb"] = "jsonb";
+    PostgresTypes["money"] = "money";
+    PostgresTypes["numeric"] = "numeric";
+    PostgresTypes["oid"] = "oid";
+    PostgresTypes["reltime"] = "reltime";
+    PostgresTypes["text"] = "text";
+    PostgresTypes["time"] = "time";
+    PostgresTypes["timestamp"] = "timestamp";
+    PostgresTypes["timestamptz"] = "timestamptz";
+    PostgresTypes["timetz"] = "timetz";
+    PostgresTypes["tsrange"] = "tsrange";
+    PostgresTypes["tstzrange"] = "tstzrange";
+})(PostgresTypes || (PostgresTypes = {}));
+/**
+ * Takes an array of columns and an object of string values then converts each string value
+ * to its mapped type.
+ *
+ * @param {{name: String, type: String}[]} columns
+ * @param {Object} record
+ * @param {Object} options The map of various options that can be applied to the mapper
+ * @param {Array} options.skipTypes The array of types that should not be converted
+ *
+ * @example convertChangeData([{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], {first_name: 'Paul', age:'33'}, {})
+ * //=>{ first_name: 'Paul', age: 33 }
+ */
+const convertChangeData = (columns, record, options = {}) => {
+    var _a;
+    const skipTypes = (_a = options.skipTypes) !== null && _a !== void 0 ? _a : [];
+    return Object.keys(record).reduce((acc, rec_key) => {
+        acc[rec_key] = convertColumn(rec_key, columns, record, skipTypes);
+        return acc;
+    }, {});
+};
+/**
+ * Converts the value of an individual column.
+ *
+ * @param {String} columnName The column that you want to convert
+ * @param {{name: String, type: String}[]} columns All of the columns
+ * @param {Object} record The map of string values
+ * @param {Array} skipTypes An array of types that should not be converted
+ * @return {object} Useless information
+ *
+ * @example convertColumn('age', [{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], {first_name: 'Paul', age: '33'}, [])
+ * //=> 33
+ * @example convertColumn('age', [{name: 'first_name', type: 'text'}, {name: 'age', type: 'int4'}], {first_name: 'Paul', age: '33'}, ['int4'])
+ * //=> "33"
+ */
+const convertColumn = (columnName, columns, record, skipTypes) => {
+    const column = columns.find((x) => x.name === columnName);
+    const colType = column === null || column === void 0 ? void 0 : column.type;
+    const value = record[columnName];
+    if (colType && !skipTypes.includes(colType)) {
+        return convertCell(colType, value);
+    }
+    return noop(value);
+};
+/**
+ * If the value of the cell is `null`, returns null.
+ * Otherwise converts the string value to the correct type.
+ * @param {String} type A postgres column type
+ * @param {String} stringValue The cell value
+ *
+ * @example convertCell('bool', 't')
+ * //=> true
+ * @example convertCell('int8', '10')
+ * //=> 10
+ * @example convertCell('_int4', '{1,2,3,4}')
+ * //=> [1,2,3,4]
+ */
+const convertCell = (type, value) => {
+    // if data type is an array
+    if (type.charAt(0) === '_') {
+        const dataType = type.slice(1, type.length);
+        return toArray(value, dataType);
+    }
+    // If not null, convert to correct type.
+    switch (type) {
+        case PostgresTypes.bool:
+            return toBoolean(value);
+        case PostgresTypes.float4:
+        case PostgresTypes.float8:
+        case PostgresTypes.int2:
+        case PostgresTypes.int4:
+        case PostgresTypes.int8:
+        case PostgresTypes.numeric:
+        case PostgresTypes.oid:
+            return toNumber(value);
+        case PostgresTypes.json:
+        case PostgresTypes.jsonb:
+            return toJson(value);
+        case PostgresTypes.timestamp:
+            return toTimestampString(value); // Format to be consistent with PostgREST
+        case PostgresTypes.abstime: // To allow users to cast it based on Timezone
+        case PostgresTypes.date: // To allow users to cast it based on Timezone
+        case PostgresTypes.daterange:
+        case PostgresTypes.int4range:
+        case PostgresTypes.int8range:
+        case PostgresTypes.money:
+        case PostgresTypes.reltime: // To allow users to cast it based on Timezone
+        case PostgresTypes.text:
+        case PostgresTypes.time: // To allow users to cast it based on Timezone
+        case PostgresTypes.timestamptz: // To allow users to cast it based on Timezone
+        case PostgresTypes.timetz: // To allow users to cast it based on Timezone
+        case PostgresTypes.tsrange:
+        case PostgresTypes.tstzrange:
+            return noop(value);
+        default:
+            // Return the value for remaining types
+            return noop(value);
+    }
+};
+const noop = (value) => {
+    return value;
+};
+const toBoolean = (value) => {
+    switch (value) {
+        case 't':
+            return true;
+        case 'f':
+            return false;
+        default:
+            return value;
+    }
+};
+const toNumber = (value) => {
+    if (typeof value === 'string') {
+        const parsedValue = parseFloat(value);
+        if (!Number.isNaN(parsedValue)) {
+            return parsedValue;
+        }
+    }
+    return value;
+};
+const toJson = (value) => {
+    if (typeof value === 'string') {
+        try {
+            return JSON.parse(value);
+        }
+        catch (error) {
+            console.log(`JSON parse error: ${error}`);
+            return value;
+        }
+    }
+    return value;
+};
+/**
+ * Converts a Postgres Array into a native JS array
+ *
+ * @example toArray('{}', 'int4')
+ * //=> []
+ * @example toArray('{"[2021-01-01,2021-12-31)","(2021-01-01,2021-12-32]"}', 'daterange')
+ * //=> ['[2021-01-01,2021-12-31)', '(2021-01-01,2021-12-32]']
+ * @example toArray([1,2,3,4], 'int4')
+ * //=> [1,2,3,4]
+ */
+const toArray = (value, type) => {
+    if (typeof value !== 'string') {
+        return value;
+    }
+    const lastIdx = value.length - 1;
+    const closeBrace = value[lastIdx];
+    const openBrace = value[0];
+    // Confirm value is a Postgres array by checking curly brackets
+    if (openBrace === '{' && closeBrace === '}') {
+        let arr;
+        const valTrim = value.slice(1, lastIdx);
+        // TODO: find a better solution to separate Postgres array data
+        try {
+            arr = JSON.parse('[' + valTrim + ']');
+        }
+        catch (_) {
+            // WARNING: splitting on comma does not cover all edge cases
+            arr = valTrim ? valTrim.split(',') : [];
+        }
+        return arr.map((val) => convertCell(type, val));
+    }
+    return value;
+};
+/**
+ * Fixes timestamp to be ISO-8601. Swaps the space between the date and time for a 'T'
+ * See https://github.com/supabase/supabase/issues/18
+ *
+ * @example toTimestampString('2019-09-10 00:00:00')
+ * //=> '2019-09-10T00:00:00'
+ */
+const toTimestampString = (value) => {
+    if (typeof value === 'string') {
+        return value.replace(' ', 'T');
+    }
+    return value;
+};
+//# sourceMappingURL=transformers.js.map
+// EXTERNAL MODULE: ./node_modules/websocket/index.js
+var websocket = __webpack_require__(5159);
+;// CONCATENATED MODULE: ./node_modules/@supabase/realtime-js/dist/module/lib/version.js
+const module_lib_version_version = '1.7.5';
+//# sourceMappingURL=version.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/realtime-js/dist/module/lib/constants.js
+
+const module_lib_constants_DEFAULT_HEADERS = { 'X-Client-Info': `realtime-js/${module_lib_version_version}` };
+const VSN = '1.0.0';
+const DEFAULT_TIMEOUT = 10000;
+const WS_CLOSE_NORMAL = 1000;
+var SOCKET_STATES;
+(function (SOCKET_STATES) {
+    SOCKET_STATES[SOCKET_STATES["connecting"] = 0] = "connecting";
+    SOCKET_STATES[SOCKET_STATES["open"] = 1] = "open";
+    SOCKET_STATES[SOCKET_STATES["closing"] = 2] = "closing";
+    SOCKET_STATES[SOCKET_STATES["closed"] = 3] = "closed";
+})(SOCKET_STATES || (SOCKET_STATES = {}));
+var CHANNEL_STATES;
+(function (CHANNEL_STATES) {
+    CHANNEL_STATES["closed"] = "closed";
+    CHANNEL_STATES["errored"] = "errored";
+    CHANNEL_STATES["joined"] = "joined";
+    CHANNEL_STATES["joining"] = "joining";
+    CHANNEL_STATES["leaving"] = "leaving";
+})(CHANNEL_STATES || (CHANNEL_STATES = {}));
+var CHANNEL_EVENTS;
+(function (CHANNEL_EVENTS) {
+    CHANNEL_EVENTS["close"] = "phx_close";
+    CHANNEL_EVENTS["error"] = "phx_error";
+    CHANNEL_EVENTS["join"] = "phx_join";
+    CHANNEL_EVENTS["reply"] = "phx_reply";
+    CHANNEL_EVENTS["leave"] = "phx_leave";
+    CHANNEL_EVENTS["access_token"] = "access_token";
+})(CHANNEL_EVENTS || (CHANNEL_EVENTS = {}));
+var TRANSPORTS;
+(function (TRANSPORTS) {
+    TRANSPORTS["websocket"] = "websocket";
+})(TRANSPORTS || (TRANSPORTS = {}));
+var CONNECTION_STATE;
+(function (CONNECTION_STATE) {
+    CONNECTION_STATE["Connecting"] = "connecting";
+    CONNECTION_STATE["Open"] = "open";
+    CONNECTION_STATE["Closing"] = "closing";
+    CONNECTION_STATE["Closed"] = "closed";
+})(CONNECTION_STATE || (CONNECTION_STATE = {}));
+//# sourceMappingURL=constants.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/realtime-js/dist/module/lib/timer.js
+/**
+ * Creates a timer that accepts a `timerCalc` function to perform calculated timeout retries, such as exponential backoff.
+ *
+ * @example
+ *    let reconnectTimer = new Timer(() => this.connect(), function(tries){
+ *      return [1000, 5000, 10000][tries - 1] || 10000
+ *    })
+ *    reconnectTimer.scheduleTimeout() // fires after 1000
+ *    reconnectTimer.scheduleTimeout() // fires after 5000
+ *    reconnectTimer.reset()
+ *    reconnectTimer.scheduleTimeout() // fires after 1000
+ */
+class Timer {
+    constructor(callback, timerCalc) {
+        this.callback = callback;
+        this.timerCalc = timerCalc;
+        this.timer = undefined;
+        this.tries = 0;
+        this.callback = callback;
+        this.timerCalc = timerCalc;
+    }
+    reset() {
+        this.tries = 0;
+        clearTimeout(this.timer);
+    }
+    // Cancels any previous scheduleTimeout and schedules callback
+    scheduleTimeout() {
+        clearTimeout(this.timer);
+        this.timer = setTimeout(() => {
+            this.tries = this.tries + 1;
+            this.callback();
+        }, this.timerCalc(this.tries + 1));
+    }
+}
+//# sourceMappingURL=timer.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/realtime-js/dist/module/lib/serializer.js
+// This file draws heavily from https://github.com/phoenixframework/phoenix/commit/cf098e9cf7a44ee6479d31d911a97d3c7430c6fe
+// License: https://github.com/phoenixframework/phoenix/blob/master/LICENSE.md
+class Serializer {
+    constructor() {
+        this.HEADER_LENGTH = 1;
+    }
+    decode(rawPayload, callback) {
+        if (rawPayload.constructor === ArrayBuffer) {
+            return callback(this._binaryDecode(rawPayload));
+        }
+        if (typeof rawPayload === 'string') {
+            return callback(JSON.parse(rawPayload));
+        }
+        return callback({});
+    }
+    _binaryDecode(buffer) {
+        const view = new DataView(buffer);
+        const decoder = new TextDecoder();
+        return this._decodeBroadcast(buffer, view, decoder);
+    }
+    _decodeBroadcast(buffer, view, decoder) {
+        const topicSize = view.getUint8(1);
+        const eventSize = view.getUint8(2);
+        let offset = this.HEADER_LENGTH + 2;
+        const topic = decoder.decode(buffer.slice(offset, offset + topicSize));
+        offset = offset + topicSize;
+        const event = decoder.decode(buffer.slice(offset, offset + eventSize));
+        offset = offset + eventSize;
+        const data = JSON.parse(decoder.decode(buffer.slice(offset, buffer.byteLength)));
+        return { ref: null, topic: topic, event: event, payload: data };
+    }
+}
+//# sourceMappingURL=serializer.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/realtime-js/dist/module/lib/push.js
+
+class Push {
+    /**
+     * Initializes the Push
+     *
+     * @param channel The Channel
+     * @param event The event, for example `"phx_join"`
+     * @param payload The payload, for example `{user_id: 123}`
+     * @param timeout The push timeout in milliseconds
+     */
+    constructor(channel, event, payload = {}, timeout = DEFAULT_TIMEOUT) {
+        this.channel = channel;
+        this.event = event;
+        this.payload = payload;
+        this.timeout = timeout;
+        this.sent = false;
+        this.timeoutTimer = undefined;
+        this.ref = '';
+        this.receivedResp = null;
+        this.recHooks = [];
+        this.refEvent = null;
+    }
+    resend(timeout) {
+        this.timeout = timeout;
+        this._cancelRefEvent();
+        this.ref = '';
+        this.refEvent = null;
+        this.receivedResp = null;
+        this.sent = false;
+        this.send();
+    }
+    send() {
+        if (this._hasReceived('timeout')) {
+            return;
+        }
+        this.startTimeout();
+        this.sent = true;
+        this.channel.socket.push({
+            topic: this.channel.topic,
+            event: this.event,
+            payload: this.payload,
+            ref: this.ref,
+            join_ref: this.channel.joinRef(),
+        });
+    }
+    updatePayload(payload) {
+        this.payload = Object.assign(Object.assign({}, this.payload), payload);
+    }
+    receive(status, callback) {
+        var _a;
+        if (this._hasReceived(status)) {
+            callback((_a = this.receivedResp) === null || _a === void 0 ? void 0 : _a.response);
+        }
+        this.recHooks.push({ status, callback });
+        return this;
+    }
+    startTimeout() {
+        if (this.timeoutTimer) {
+            return;
+        }
+        this.ref = this.channel.socket.makeRef();
+        this.refEvent = this.channel.replyEventName(this.ref);
+        const callback = (payload) => {
+            this._cancelRefEvent();
+            this._cancelTimeout();
+            this.receivedResp = payload;
+            this._matchReceive(payload);
+        };
+        this.channel.on(this.refEvent, callback);
+        this.timeoutTimer = setTimeout(() => {
+            this.trigger('timeout', {});
+        }, this.timeout);
+    }
+    trigger(status, response) {
+        if (this.refEvent)
+            this.channel.trigger(this.refEvent, { status, response });
+    }
+    destroy() {
+        this._cancelRefEvent();
+        this._cancelTimeout();
+    }
+    _cancelRefEvent() {
+        if (!this.refEvent) {
+            return;
+        }
+        this.channel.off(this.refEvent);
+    }
+    _cancelTimeout() {
+        clearTimeout(this.timeoutTimer);
+        this.timeoutTimer = undefined;
+    }
+    _matchReceive({ status, response, }) {
+        this.recHooks
+            .filter((h) => h.status === status)
+            .forEach((h) => h.callback(response));
+    }
+    _hasReceived(status) {
+        return this.receivedResp && this.receivedResp.status === status;
+    }
+}
+//# sourceMappingURL=push.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/realtime-js/dist/module/RealtimeSubscription.js
+
+
+
+class RealtimeSubscription {
+    constructor(topic, params = {}, socket) {
+        this.topic = topic;
+        this.params = params;
+        this.socket = socket;
+        this.bindings = [];
+        this.state = CHANNEL_STATES.closed;
+        this.joinedOnce = false;
+        this.pushBuffer = [];
+        this.timeout = this.socket.timeout;
+        this.joinPush = new Push(this, CHANNEL_EVENTS.join, this.params, this.timeout);
+        this.rejoinTimer = new Timer(() => this.rejoinUntilConnected(), this.socket.reconnectAfterMs);
+        this.joinPush.receive('ok', () => {
+            this.state = CHANNEL_STATES.joined;
+            this.rejoinTimer.reset();
+            this.pushBuffer.forEach((pushEvent) => pushEvent.send());
+            this.pushBuffer = [];
+        });
+        this.onClose(() => {
+            this.rejoinTimer.reset();
+            this.socket.log('channel', `close ${this.topic} ${this.joinRef()}`);
+            this.state = CHANNEL_STATES.closed;
+            this.socket.remove(this);
+        });
+        this.onError((reason) => {
+            if (this.isLeaving() || this.isClosed()) {
+                return;
+            }
+            this.socket.log('channel', `error ${this.topic}`, reason);
+            this.state = CHANNEL_STATES.errored;
+            this.rejoinTimer.scheduleTimeout();
+        });
+        this.joinPush.receive('timeout', () => {
+            if (!this.isJoining()) {
+                return;
+            }
+            this.socket.log('channel', `timeout ${this.topic}`, this.joinPush.timeout);
+            this.state = CHANNEL_STATES.errored;
+            this.rejoinTimer.scheduleTimeout();
+        });
+        this.on(CHANNEL_EVENTS.reply, (payload, ref) => {
+            this.trigger(this.replyEventName(ref), payload);
+        });
+    }
+    rejoinUntilConnected() {
+        this.rejoinTimer.scheduleTimeout();
+        if (this.socket.isConnected()) {
+            this.rejoin();
+        }
+    }
+    subscribe(timeout = this.timeout) {
+        if (this.joinedOnce) {
+            throw `tried to subscribe multiple times. 'subscribe' can only be called a single time per channel instance`;
+        }
+        else {
+            this.joinedOnce = true;
+            this.rejoin(timeout);
+            return this.joinPush;
+        }
+    }
+    onClose(callback) {
+        this.on(CHANNEL_EVENTS.close, callback);
+    }
+    onError(callback) {
+        this.on(CHANNEL_EVENTS.error, (reason) => callback(reason));
+    }
+    on(event, callback) {
+        this.bindings.push({ event, callback });
+    }
+    off(event) {
+        this.bindings = this.bindings.filter((bind) => bind.event !== event);
+    }
+    canPush() {
+        return this.socket.isConnected() && this.isJoined();
+    }
+    push(event, payload, timeout = this.timeout) {
+        if (!this.joinedOnce) {
+            throw `tried to push '${event}' to '${this.topic}' before joining. Use channel.subscribe() before pushing events`;
+        }
+        let pushEvent = new Push(this, event, payload, timeout);
+        if (this.canPush()) {
+            pushEvent.send();
+        }
+        else {
+            pushEvent.startTimeout();
+            this.pushBuffer.push(pushEvent);
+        }
+        return pushEvent;
+    }
+    updateJoinPayload(payload) {
+        this.joinPush.updatePayload(payload);
+    }
+    /**
+     * Leaves the channel
+     *
+     * Unsubscribes from server events, and instructs channel to terminate on server.
+     * Triggers onClose() hooks.
+     *
+     * To receive leave acknowledgements, use the a `receive` hook to bind to the server ack, ie:
+     * channel.unsubscribe().receive("ok", () => alert("left!") )
+     */
+    unsubscribe(timeout = this.timeout) {
+        this.state = CHANNEL_STATES.leaving;
+        let onClose = () => {
+            this.socket.log('channel', `leave ${this.topic}`);
+            this.trigger(CHANNEL_EVENTS.close, 'leave', this.joinRef());
+        };
+        // Destroy joinPush to avoid connection timeouts during unscription phase
+        this.joinPush.destroy();
+        let leavePush = new Push(this, CHANNEL_EVENTS.leave, {}, timeout);
+        leavePush.receive('ok', () => onClose()).receive('timeout', () => onClose());
+        leavePush.send();
+        if (!this.canPush()) {
+            leavePush.trigger('ok', {});
+        }
+        return leavePush;
+    }
+    /**
+     * Overridable message hook
+     *
+     * Receives all events for specialized message handling before dispatching to the channel callbacks.
+     * Must return the payload, modified or unmodified.
+     */
+    onMessage(event, payload, ref) {
+        return payload;
+    }
+    isMember(topic) {
+        return this.topic === topic;
+    }
+    joinRef() {
+        return this.joinPush.ref;
+    }
+    rejoin(timeout = this.timeout) {
+        if (this.isLeaving()) {
+            return;
+        }
+        this.socket.leaveOpenTopic(this.topic);
+        this.state = CHANNEL_STATES.joining;
+        this.joinPush.resend(timeout);
+    }
+    trigger(event, payload, ref) {
+        let { close, error, leave, join } = CHANNEL_EVENTS;
+        let events = [close, error, leave, join];
+        if (ref && events.indexOf(event) >= 0 && ref !== this.joinRef()) {
+            return;
+        }
+        let handledPayload = this.onMessage(event, payload, ref);
+        if (payload && !handledPayload) {
+            throw 'channel onMessage callbacks must return the payload, modified or unmodified';
+        }
+        this.bindings
+            .filter((bind) => {
+            // Bind all events if the user specifies a wildcard.
+            if (bind.event === '*') {
+                return event === (payload === null || payload === void 0 ? void 0 : payload.type);
+            }
+            else {
+                return bind.event === event;
+            }
+        })
+            .map((bind) => bind.callback(handledPayload, ref));
+    }
+    replyEventName(ref) {
+        return `chan_reply_${ref}`;
+    }
+    isClosed() {
+        return this.state === CHANNEL_STATES.closed;
+    }
+    isErrored() {
+        return this.state === CHANNEL_STATES.errored;
+    }
+    isJoined() {
+        return this.state === CHANNEL_STATES.joined;
+    }
+    isJoining() {
+        return this.state === CHANNEL_STATES.joining;
+    }
+    isLeaving() {
+        return this.state === CHANNEL_STATES.leaving;
+    }
+}
+//# sourceMappingURL=RealtimeSubscription.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js
+var RealtimeClient_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+
+
+const RealtimeClient_noop = () => { };
+class RealtimeClient {
+    /**
+     * Initializes the Socket.
+     *
+     * @param endPoint The string WebSocket endpoint, ie, "ws://example.com/socket", "wss://example.com", "/socket" (inherited host & protocol)
+     * @param options.transport The Websocket Transport, for example WebSocket.
+     * @param options.timeout The default timeout in milliseconds to trigger push timeouts.
+     * @param options.params The optional params to pass when connecting.
+     * @param options.headers The optional headers to pass when connecting.
+     * @param options.heartbeatIntervalMs The millisec interval to send a heartbeat message.
+     * @param options.logger The optional function for specialized logging, ie: logger: (kind, msg, data) => { console.log(`${kind}: ${msg}`, data) }
+     * @param options.encode The function to encode outgoing messages. Defaults to JSON: (payload, callback) => callback(JSON.stringify(payload))
+     * @param options.decode The function to decode incoming messages. Defaults to Serializer's decode.
+     * @param options.longpollerTimeout The maximum timeout of a long poll AJAX request. Defaults to 20s (double the server long poll timer).
+     * @param options.reconnectAfterMs he optional function that returns the millsec reconnect interval. Defaults to stepped backoff off.
+     */
+    constructor(endPoint, options) {
+        this.accessToken = null;
+        this.channels = [];
+        this.endPoint = '';
+        this.headers = module_lib_constants_DEFAULT_HEADERS;
+        this.params = {};
+        this.timeout = DEFAULT_TIMEOUT;
+        this.transport = websocket.w3cwebsocket;
+        this.heartbeatIntervalMs = 30000;
+        this.longpollerTimeout = 20000;
+        this.heartbeatTimer = undefined;
+        this.pendingHeartbeatRef = null;
+        this.ref = 0;
+        this.logger = RealtimeClient_noop;
+        this.conn = null;
+        this.sendBuffer = [];
+        this.serializer = new Serializer();
+        this.stateChangeCallbacks = {
+            open: [],
+            close: [],
+            error: [],
+            message: [],
+        };
+        this.endPoint = `${endPoint}/${TRANSPORTS.websocket}`;
+        if (options === null || options === void 0 ? void 0 : options.params)
+            this.params = options.params;
+        if (options === null || options === void 0 ? void 0 : options.headers)
+            this.headers = Object.assign(Object.assign({}, this.headers), options.headers);
+        if (options === null || options === void 0 ? void 0 : options.timeout)
+            this.timeout = options.timeout;
+        if (options === null || options === void 0 ? void 0 : options.logger)
+            this.logger = options.logger;
+        if (options === null || options === void 0 ? void 0 : options.transport)
+            this.transport = options.transport;
+        if (options === null || options === void 0 ? void 0 : options.heartbeatIntervalMs)
+            this.heartbeatIntervalMs = options.heartbeatIntervalMs;
+        if (options === null || options === void 0 ? void 0 : options.longpollerTimeout)
+            this.longpollerTimeout = options.longpollerTimeout;
+        this.reconnectAfterMs = (options === null || options === void 0 ? void 0 : options.reconnectAfterMs) ? options.reconnectAfterMs
+            : (tries) => {
+                return [1000, 2000, 5000, 10000][tries - 1] || 10000;
+            };
+        this.encode = (options === null || options === void 0 ? void 0 : options.encode) ? options.encode
+            : (payload, callback) => {
+                return callback(JSON.stringify(payload));
+            };
+        this.decode = (options === null || options === void 0 ? void 0 : options.decode) ? options.decode
+            : this.serializer.decode.bind(this.serializer);
+        this.reconnectTimer = new Timer(() => RealtimeClient_awaiter(this, void 0, void 0, function* () {
+            yield this.disconnect();
+            this.connect();
+        }), this.reconnectAfterMs);
+    }
+    /**
+     * Connects the socket, unless already connected.
+     */
+    connect() {
+        if (this.conn) {
+            return;
+        }
+        this.conn = new this.transport(this.endPointURL(), [], null, this.headers);
+        if (this.conn) {
+            // this.conn.timeout = this.longpollerTimeout // TYPE ERROR
+            this.conn.binaryType = 'arraybuffer';
+            this.conn.onopen = () => this._onConnOpen();
+            this.conn.onerror = (error) => this._onConnError(error);
+            this.conn.onmessage = (event) => this.onConnMessage(event);
+            this.conn.onclose = (event) => this._onConnClose(event);
+        }
+    }
+    /**
+     * Disconnects the socket.
+     *
+     * @param code A numeric status code to send on disconnect.
+     * @param reason A custom reason for the disconnect.
+     */
+    disconnect(code, reason) {
+        return new Promise((resolve, _reject) => {
+            try {
+                if (this.conn) {
+                    this.conn.onclose = function () { }; // noop
+                    if (code) {
+                        this.conn.close(code, reason || '');
+                    }
+                    else {
+                        this.conn.close();
+                    }
+                    this.conn = null;
+                    // remove open handles
+                    this.heartbeatTimer && clearInterval(this.heartbeatTimer);
+                    this.reconnectTimer.reset();
+                }
+                resolve({ error: null, data: true });
+            }
+            catch (error) {
+                resolve({ error: error, data: false });
+            }
+        });
+    }
+    /**
+     * Logs the message.
+     *
+     * For customized logging, `this.logger` can be overriden.
+     */
+    log(kind, msg, data) {
+        this.logger(kind, msg, data);
+    }
+    /**
+     * Registers a callback for connection state change event.
+     *
+     * @param callback A function to be called when the event occurs.
+     *
+     * @example
+     *    socket.onOpen(() => console.log("Socket opened."))
+     */
+    onOpen(callback) {
+        this.stateChangeCallbacks.open.push(callback);
+    }
+    /**
+     * Registers a callback for connection state change events.
+     *
+     * @param callback A function to be called when the event occurs.
+     *
+     * @example
+     *    socket.onOpen(() => console.log("Socket closed."))
+     */
+    onClose(callback) {
+        this.stateChangeCallbacks.close.push(callback);
+    }
+    /**
+     * Registers a callback for connection state change events.
+     *
+     * @param callback A function to be called when the event occurs.
+     *
+     * @example
+     *    socket.onOpen((error) => console.log("An error occurred"))
+     */
+    onError(callback) {
+        this.stateChangeCallbacks.error.push(callback);
+    }
+    /**
+     * Calls a function any time a message is received.
+     *
+     * @param callback A function to be called when the event occurs.
+     *
+     * @example
+     *    socket.onMessage((message) => console.log(message))
+     */
+    onMessage(callback) {
+        this.stateChangeCallbacks.message.push(callback);
+    }
+    /**
+     * Returns the current state of the socket.
+     */
+    connectionState() {
+        switch (this.conn && this.conn.readyState) {
+            case SOCKET_STATES.connecting:
+                return CONNECTION_STATE.Connecting;
+            case SOCKET_STATES.open:
+                return CONNECTION_STATE.Open;
+            case SOCKET_STATES.closing:
+                return CONNECTION_STATE.Closing;
+            default:
+                return CONNECTION_STATE.Closed;
+        }
+    }
+    /**
+     * Retuns `true` is the connection is open.
+     */
+    isConnected() {
+        return this.connectionState() === CONNECTION_STATE.Open;
+    }
+    /**
+     * Removes a subscription from the socket.
+     *
+     * @param channel An open subscription.
+     */
+    remove(channel) {
+        this.channels = this.channels.filter((c) => c.joinRef() !== channel.joinRef());
+    }
+    channel(topic, chanParams = {}) {
+        const chan = new RealtimeSubscription(topic, chanParams, this);
+        this.channels.push(chan);
+        return chan;
+    }
+    /**
+     * Push out a message if the socket is connected.
+     *
+     * If the socket is not connected, the message gets enqueued within a local buffer, and sent out when a connection is next established.
+     */
+    push(data) {
+        const { topic, event, payload, ref } = data;
+        let callback = () => {
+            this.encode(data, (result) => {
+                var _a;
+                (_a = this.conn) === null || _a === void 0 ? void 0 : _a.send(result);
+            });
+        };
+        this.log('push', `${topic} ${event} (${ref})`, payload);
+        if (this.isConnected()) {
+            callback();
+        }
+        else {
+            this.sendBuffer.push(callback);
+        }
+    }
+    onConnMessage(rawMessage) {
+        this.decode(rawMessage.data, (msg) => {
+            let { topic, event, payload, ref } = msg;
+            if ((ref && ref === this.pendingHeartbeatRef) ||
+                event === (payload === null || payload === void 0 ? void 0 : payload.type)) {
+                this.pendingHeartbeatRef = null;
+            }
+            this.log('receive', `${payload.status || ''} ${topic} ${event} ${(ref && '(' + ref + ')') || ''}`, payload);
+            this.channels
+                .filter((channel) => channel.isMember(topic))
+                .forEach((channel) => channel.trigger(event, payload, ref));
+            this.stateChangeCallbacks.message.forEach((callback) => callback(msg));
+        });
+    }
+    /**
+     * Returns the URL of the websocket.
+     */
+    endPointURL() {
+        return this._appendParams(this.endPoint, Object.assign({}, this.params, { vsn: VSN }));
+    }
+    /**
+     * Return the next message ref, accounting for overflows
+     */
+    makeRef() {
+        let newRef = this.ref + 1;
+        if (newRef === this.ref) {
+            this.ref = 0;
+        }
+        else {
+            this.ref = newRef;
+        }
+        return this.ref.toString();
+    }
+    /**
+     * Sets the JWT access token used for channel subscription authorization and Realtime RLS.
+     *
+     * @param token A JWT string.
+     */
+    setAuth(token) {
+        this.accessToken = token;
+        this.channels.forEach((channel) => {
+            token && channel.updateJoinPayload({ user_token: token });
+            if (channel.joinedOnce && channel.isJoined()) {
+                channel.push(CHANNEL_EVENTS.access_token, { access_token: token });
+            }
+        });
+    }
+    /**
+     * Unsubscribe from channels with the specified topic.
+     */
+    leaveOpenTopic(topic) {
+        let dupChannel = this.channels.find((c) => c.topic === topic && (c.isJoined() || c.isJoining()));
+        if (dupChannel) {
+            this.log('transport', `leaving duplicate topic "${topic}"`);
+            dupChannel.unsubscribe();
+        }
+    }
+    _onConnOpen() {
+        this.log('transport', `connected to ${this.endPointURL()}`);
+        this._flushSendBuffer();
+        this.reconnectTimer.reset();
+        this.heartbeatTimer && clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = setInterval(() => this._sendHeartbeat(), this.heartbeatIntervalMs);
+        this.stateChangeCallbacks.open.forEach((callback) => callback());
+    }
+    _onConnClose(event) {
+        this.log('transport', 'close', event);
+        this._triggerChanError();
+        this.heartbeatTimer && clearInterval(this.heartbeatTimer);
+        this.reconnectTimer.scheduleTimeout();
+        this.stateChangeCallbacks.close.forEach((callback) => callback(event));
+    }
+    _onConnError(error) {
+        this.log('transport', error.message);
+        this._triggerChanError();
+        this.stateChangeCallbacks.error.forEach((callback) => callback(error));
+    }
+    _triggerChanError() {
+        this.channels.forEach((channel) => channel.trigger(CHANNEL_EVENTS.error));
+    }
+    _appendParams(url, params) {
+        if (Object.keys(params).length === 0) {
+            return url;
+        }
+        const prefix = url.match(/\?/) ? '&' : '?';
+        const query = new URLSearchParams(params);
+        return `${url}${prefix}${query}`;
+    }
+    _flushSendBuffer() {
+        if (this.isConnected() && this.sendBuffer.length > 0) {
+            this.sendBuffer.forEach((callback) => callback());
+            this.sendBuffer = [];
+        }
+    }
+    _sendHeartbeat() {
+        var _a;
+        if (!this.isConnected()) {
+            return;
+        }
+        if (this.pendingHeartbeatRef) {
+            this.pendingHeartbeatRef = null;
+            this.log('transport', 'heartbeat timeout. Attempting to re-establish connection');
+            (_a = this.conn) === null || _a === void 0 ? void 0 : _a.close(WS_CLOSE_NORMAL, 'hearbeat timeout');
+            return;
+        }
+        this.pendingHeartbeatRef = this.makeRef();
+        this.push({
+            topic: 'phoenix',
+            event: 'heartbeat',
+            payload: {},
+            ref: this.pendingHeartbeatRef,
+        });
+        this.setAuth(this.accessToken);
+    }
+}
+//# sourceMappingURL=RealtimeClient.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/realtime-js/dist/module/index.js
+
+
+
+
+//# sourceMappingURL=index.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/supabase-js/dist/module/lib/SupabaseRealtimeClient.js
+
+class SupabaseRealtimeClient {
+    constructor(socket, headers, schema, tableName) {
+        const chanParams = {};
+        const topic = tableName === '*' ? `realtime:${schema}` : `realtime:${schema}:${tableName}`;
+        const userToken = headers['Authorization'].split(' ')[1];
+        if (userToken) {
+            chanParams['user_token'] = userToken;
+        }
+        this.subscription = socket.channel(topic, chanParams);
+    }
+    getPayloadRecords(payload) {
+        const records = {
+            new: {},
+            old: {},
+        };
+        if (payload.type === 'INSERT' || payload.type === 'UPDATE') {
+            records.new = convertChangeData(payload.columns, payload.record);
+        }
+        if (payload.type === 'UPDATE' || payload.type === 'DELETE') {
+            records.old = convertChangeData(payload.columns, payload.old_record);
+        }
+        return records;
+    }
+    /**
+     * The event you want to listen to.
+     *
+     * @param event The event
+     * @param callback A callback function that is called whenever the event occurs.
+     */
+    on(event, callback) {
+        this.subscription.on(event, (payload) => {
+            let enrichedPayload = {
+                schema: payload.schema,
+                table: payload.table,
+                commit_timestamp: payload.commit_timestamp,
+                eventType: payload.type,
+                new: {},
+                old: {},
+                errors: payload.errors,
+            };
+            enrichedPayload = Object.assign(Object.assign({}, enrichedPayload), this.getPayloadRecords(payload));
+            callback(enrichedPayload);
+        });
+        return this;
+    }
+    /**
+     * Enables the subscription.
+     */
+    subscribe(callback = () => { }) {
+        this.subscription.onError((e) => callback('SUBSCRIPTION_ERROR', e));
+        this.subscription.onClose(() => callback('CLOSED'));
+        this.subscription
+            .subscribe()
+            .receive('ok', () => callback('SUBSCRIBED'))
+            .receive('error', (e) => callback('SUBSCRIPTION_ERROR', e))
+            .receive('timeout', () => callback('RETRYING_AFTER_TIMEOUT'));
+        return this.subscription;
+    }
+}
+//# sourceMappingURL=SupabaseRealtimeClient.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/supabase-js/dist/module/lib/SupabaseQueryBuilder.js
+
+
+class SupabaseQueryBuilder extends PostgrestQueryBuilder {
+    constructor(url, { headers = {}, schema, realtime, table, fetch, shouldThrowOnError, }) {
+        super(url, { headers, schema, fetch, shouldThrowOnError });
+        this._subscription = null;
+        this._realtime = realtime;
+        this._headers = headers;
+        this._schema = schema;
+        this._table = table;
+    }
+    /**
+     * Subscribe to realtime changes in your database.
+     * @param event The database event which you would like to receive updates for, or you can use the special wildcard `*` to listen to all changes.
+     * @param callback A callback that will handle the payload that is sent whenever your database changes.
+     */
+    on(event, callback) {
+        if (!this._realtime.isConnected()) {
+            this._realtime.connect();
+        }
+        if (!this._subscription) {
+            this._subscription = new SupabaseRealtimeClient(this._realtime, this._headers, this._schema, this._table);
+        }
+        return this._subscription.on(event, callback);
+    }
+}
+//# sourceMappingURL=SupabaseQueryBuilder.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/storage-js/dist/module/lib/version.js
+// generated by genversion
+const dist_module_lib_version_version = '1.7.3';
+//# sourceMappingURL=version.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/storage-js/dist/module/lib/constants.js
+
+const dist_module_lib_constants_DEFAULT_HEADERS = { 'X-Client-Info': `storage-js/${dist_module_lib_version_version}` };
+//# sourceMappingURL=constants.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/storage-js/dist/module/lib/fetch.js
+var fetch_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+const fetch_getErrorMessage = (err) => err.msg || err.message || err.error_description || err.error || JSON.stringify(err);
+const fetch_handleError = (error, reject) => {
+    if (typeof error.json !== 'function') {
+        return reject(error);
+    }
+    error.json().then((err) => {
+        return reject({
+            message: fetch_getErrorMessage(err),
+            status: (error === null || error === void 0 ? void 0 : error.status) || 500,
+        });
+    });
+};
+const fetch_getRequestParams = (method, options, parameters, body) => {
+    const params = { method, headers: (options === null || options === void 0 ? void 0 : options.headers) || {} };
+    if (method === 'GET') {
+        return params;
+    }
+    params.headers = Object.assign({ 'Content-Type': 'application/json' }, options === null || options === void 0 ? void 0 : options.headers);
+    params.body = JSON.stringify(body);
+    return Object.assign(Object.assign({}, params), parameters);
+};
+function fetch_handleRequest(fetcher, method, url, options, parameters, body) {
+    return fetch_awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            fetcher(url, fetch_getRequestParams(method, options, parameters, body))
+                .then((result) => {
+                if (!result.ok)
+                    throw result;
+                if (options === null || options === void 0 ? void 0 : options.noResolveJson)
+                    return resolve(result);
+                return result.json();
+            })
+                .then((data) => resolve(data))
+                .catch((error) => fetch_handleError(error, reject));
+        });
+    });
+}
+function fetch_get(fetcher, url, options, parameters) {
+    return fetch_awaiter(this, void 0, void 0, function* () {
+        return fetch_handleRequest(fetcher, 'GET', url, options, parameters);
+    });
+}
+function fetch_post(fetcher, url, body, options, parameters) {
+    return fetch_awaiter(this, void 0, void 0, function* () {
+        return fetch_handleRequest(fetcher, 'POST', url, options, parameters, body);
+    });
+}
+function fetch_put(fetcher, url, body, options, parameters) {
+    return fetch_awaiter(this, void 0, void 0, function* () {
+        return fetch_handleRequest(fetcher, 'PUT', url, options, parameters, body);
+    });
+}
+function fetch_remove(fetcher, url, body, options, parameters) {
+    return fetch_awaiter(this, void 0, void 0, function* () {
+        return fetch_handleRequest(fetcher, 'DELETE', url, options, parameters, body);
+    });
+}
+//# sourceMappingURL=fetch.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/storage-js/dist/module/lib/helpers.js
+var lib_helpers_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+const helpers_resolveFetch = (customFetch) => {
+    let _fetch;
+    if (customFetch) {
+        _fetch = customFetch;
+    }
+    else if (typeof fetch === 'undefined') {
+        _fetch = (...args) => lib_helpers_awaiter(void 0, void 0, void 0, function* () { return yield (yield __webpack_require__.e(/* import() */ 165).then(__webpack_require__.t.bind(__webpack_require__, 4165, 23))).fetch(...args); });
+    }
+    else {
+        _fetch = fetch;
+    }
+    return (...args) => _fetch(...args);
+};
+//# sourceMappingURL=helpers.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/storage-js/dist/module/lib/StorageBucketApi.js
+var StorageBucketApi_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+class StorageBucketApi {
+    constructor(url, headers = {}, fetch) {
+        this.url = url;
+        this.headers = Object.assign(Object.assign({}, dist_module_lib_constants_DEFAULT_HEADERS), headers);
+        this.fetch = helpers_resolveFetch(fetch);
+    }
+    /**
+     * Retrieves the details of all Storage buckets within an existing project.
+     */
+    listBuckets() {
+        return StorageBucketApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield fetch_get(this.fetch, `${this.url}/bucket`, { headers: this.headers });
+                return { data, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    /**
+     * Retrieves the details of an existing Storage bucket.
+     *
+     * @param id The unique identifier of the bucket you would like to retrieve.
+     */
+    getBucket(id) {
+        return StorageBucketApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield fetch_get(this.fetch, `${this.url}/bucket/${id}`, { headers: this.headers });
+                return { data, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    /**
+     * Creates a new Storage bucket
+     *
+     * @param id A unique identifier for the bucket you are creating.
+     * @returns newly created bucket id
+     */
+    createBucket(id, options = { public: false }) {
+        return StorageBucketApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield fetch_post(this.fetch, `${this.url}/bucket`, { id, name: id, public: options.public }, { headers: this.headers });
+                return { data: data.name, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    /**
+     * Updates a new Storage bucket
+     *
+     * @param id A unique identifier for the bucket you are updating.
+     */
+    updateBucket(id, options) {
+        return StorageBucketApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield fetch_put(this.fetch, `${this.url}/bucket/${id}`, { id, name: id, public: options.public }, { headers: this.headers });
+                return { data, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    /**
+     * Removes all objects inside a single bucket.
+     *
+     * @param id The unique identifier of the bucket you would like to empty.
+     */
+    emptyBucket(id) {
+        return StorageBucketApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield fetch_post(this.fetch, `${this.url}/bucket/${id}/empty`, {}, { headers: this.headers });
+                return { data, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    /**
+     * Deletes an existing bucket. A bucket can't be deleted with existing objects inside it.
+     * You must first `empty()` the bucket.
+     *
+     * @param id The unique identifier of the bucket you would like to delete.
+     */
+    deleteBucket(id) {
+        return StorageBucketApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield fetch_remove(this.fetch, `${this.url}/bucket/${id}`, {}, { headers: this.headers });
+                return { data, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+}
+//# sourceMappingURL=StorageBucketApi.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/storage-js/dist/module/lib/StorageFileApi.js
+var StorageFileApi_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+const DEFAULT_SEARCH_OPTIONS = {
+    limit: 100,
+    offset: 0,
+    sortBy: {
+        column: 'name',
+        order: 'asc',
+    },
+};
+const DEFAULT_FILE_OPTIONS = {
+    cacheControl: '3600',
+    contentType: 'text/plain;charset=UTF-8',
+    upsert: false,
+};
+class StorageFileApi {
+    constructor(url, headers = {}, bucketId, fetch) {
+        this.url = url;
+        this.headers = headers;
+        this.bucketId = bucketId;
+        this.fetch = helpers_resolveFetch(fetch);
+    }
+    /**
+     * Uploads a file to an existing bucket or replaces an existing file at the specified path with a new one.
+     *
+     * @param method HTTP method.
+     * @param path The relative file path. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to upload.
+     * @param fileBody The body of the file to be stored in the bucket.
+     * @param fileOptions HTTP headers.
+     * `cacheControl`: string, the `Cache-Control: max-age=<seconds>` seconds value.
+     * `contentType`: string, the `Content-Type` header value. Should be specified if using a `fileBody` that is neither `Blob` nor `File` nor `FormData`, otherwise will default to `text/plain;charset=UTF-8`.
+     * `upsert`: boolean, whether to perform an upsert.
+     */
+    uploadOrUpdate(method, path, fileBody, fileOptions) {
+        return StorageFileApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                let body;
+                const options = Object.assign(Object.assign({}, DEFAULT_FILE_OPTIONS), fileOptions);
+                const headers = Object.assign(Object.assign({}, this.headers), (method === 'POST' && { 'x-upsert': String(options.upsert) }));
+                if (typeof Blob !== 'undefined' && fileBody instanceof Blob) {
+                    body = new FormData();
+                    body.append('cacheControl', options.cacheControl);
+                    body.append('', fileBody);
+                }
+                else if (typeof FormData !== 'undefined' && fileBody instanceof FormData) {
+                    body = fileBody;
+                    body.append('cacheControl', options.cacheControl);
+                }
+                else {
+                    body = fileBody;
+                    headers['cache-control'] = `max-age=${options.cacheControl}`;
+                    headers['content-type'] = options.contentType;
+                }
+                const cleanPath = this._removeEmptyFolders(path);
+                const _path = this._getFinalPath(cleanPath);
+                const res = yield this.fetch(`${this.url}/object/${_path}`, {
+                    method,
+                    body: body,
+                    headers,
+                });
+                if (res.ok) {
+                    // const data = await res.json()
+                    // temporary fix till backend is updated to the latest storage-api version
+                    return { data: { Key: _path }, error: null };
+                }
+                else {
+                    const error = yield res.json();
+                    return { data: null, error };
+                }
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    /**
+     * Uploads a file to an existing bucket.
+     *
+     * @param path The relative file path. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to upload.
+     * @param fileBody The body of the file to be stored in the bucket.
+     * @param fileOptions HTTP headers.
+     * `cacheControl`: string, the `Cache-Control: max-age=<seconds>` seconds value.
+     * `contentType`: string, the `Content-Type` header value. Should be specified if using a `fileBody` that is neither `Blob` nor `File` nor `FormData`, otherwise will default to `text/plain;charset=UTF-8`.
+     * `upsert`: boolean, whether to perform an upsert.
+     */
+    upload(path, fileBody, fileOptions) {
+        return StorageFileApi_awaiter(this, void 0, void 0, function* () {
+            return this.uploadOrUpdate('POST', path, fileBody, fileOptions);
+        });
+    }
+    /**
+     * Replaces an existing file at the specified path with a new one.
+     *
+     * @param path The relative file path. Should be of the format `folder/subfolder/filename.png`. The bucket must already exist before attempting to upload.
+     * @param fileBody The body of the file to be stored in the bucket.
+     * @param fileOptions HTTP headers.
+     * `cacheControl`: string, the `Cache-Control: max-age=<seconds>` seconds value.
+     * `contentType`: string, the `Content-Type` header value. Should be specified if using a `fileBody` that is neither `Blob` nor `File` nor `FormData`, otherwise will default to `text/plain;charset=UTF-8`.
+     * `upsert`: boolean, whether to perform an upsert.
+     */
+    update(path, fileBody, fileOptions) {
+        return StorageFileApi_awaiter(this, void 0, void 0, function* () {
+            return this.uploadOrUpdate('PUT', path, fileBody, fileOptions);
+        });
+    }
+    /**
+     * Moves an existing file.
+     *
+     * @param fromPath The original file path, including the current file name. For example `folder/image.png`.
+     * @param toPath The new file path, including the new file name. For example `folder/image-new.png`.
+     */
+    move(fromPath, toPath) {
+        return StorageFileApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield fetch_post(this.fetch, `${this.url}/object/move`, { bucketId: this.bucketId, sourceKey: fromPath, destinationKey: toPath }, { headers: this.headers });
+                return { data, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    /**
+     * Copies an existing file.
+     *
+     * @param fromPath The original file path, including the current file name. For example `folder/image.png`.
+     * @param toPath The new file path, including the new file name. For example `folder/image-copy.png`.
+     */
+    copy(fromPath, toPath) {
+        return StorageFileApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield fetch_post(this.fetch, `${this.url}/object/copy`, { bucketId: this.bucketId, sourceKey: fromPath, destinationKey: toPath }, { headers: this.headers });
+                return { data, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    /**
+     * Create signed URL to download file without requiring permissions. This URL can be valid for a set number of seconds.
+     *
+     * @param path The file path to be downloaded, including the current file name. For example `folder/image.png`.
+     * @param expiresIn The number of seconds until the signed URL expires. For example, `60` for a URL which is valid for one minute.
+     */
+    createSignedUrl(path, expiresIn) {
+        return StorageFileApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const _path = this._getFinalPath(path);
+                let data = yield fetch_post(this.fetch, `${this.url}/object/sign/${_path}`, { expiresIn }, { headers: this.headers });
+                const signedURL = `${this.url}${data.signedURL}`;
+                data = { signedURL };
+                return { data, error: null, signedURL };
+            }
+            catch (error) {
+                return { data: null, error, signedURL: null };
+            }
+        });
+    }
+    /**
+     * Create signed URLs to download files without requiring permissions. These URLs can be valid for a set number of seconds.
+     *
+     * @param paths The file paths to be downloaded, including the current file names. For example `['folder/image.png', 'folder2/image2.png']`.
+     * @param expiresIn The number of seconds until the signed URLs expire. For example, `60` for URLs which are valid for one minute.
+     */
+    createSignedUrls(paths, expiresIn) {
+        return StorageFileApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield fetch_post(this.fetch, `${this.url}/object/sign/${this.bucketId}`, { expiresIn, paths }, { headers: this.headers });
+                return {
+                    data: data.map((datum) => (Object.assign(Object.assign({}, datum), { signedURL: datum.signedURL ? `${this.url}${datum.signedURL}` : null }))),
+                    error: null,
+                };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    /**
+     * Downloads a file.
+     *
+     * @param path The file path to be downloaded, including the path and file name. For example `folder/image.png`.
+     */
+    download(path) {
+        return StorageFileApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const _path = this._getFinalPath(path);
+                const res = yield fetch_get(this.fetch, `${this.url}/object/${_path}`, {
+                    headers: this.headers,
+                    noResolveJson: true,
+                });
+                const data = yield res.blob();
+                return { data, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    /**
+     * Retrieve URLs for assets in public buckets
+     *
+     * @param path The file path to be downloaded, including the path and file name. For example `folder/image.png`.
+     */
+    getPublicUrl(path) {
+        try {
+            const _path = this._getFinalPath(path);
+            const publicURL = `${this.url}/object/public/${_path}`;
+            const data = { publicURL };
+            return { data, error: null, publicURL };
+        }
+        catch (error) {
+            return { data: null, error, publicURL: null };
+        }
+    }
+    /**
+     * Deletes files within the same bucket
+     *
+     * @param paths An array of files to be deleted, including the path and file name. For example [`folder/image.png`].
+     */
+    remove(paths) {
+        return StorageFileApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const data = yield fetch_remove(this.fetch, `${this.url}/object/${this.bucketId}`, { prefixes: paths }, { headers: this.headers });
+                return { data, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    /**
+     * Get file metadata
+     * @param id the file id to retrieve metadata
+     */
+    // async getMetadata(id: string): Promise<{ data: Metadata | null; error: Error | null }> {
+    //   try {
+    //     const data = await get(`${this.url}/metadata/${id}`, { headers: this.headers })
+    //     return { data, error: null }
+    //   } catch (error) {
+    //     return { data: null, error }
+    //   }
+    // }
+    /**
+     * Update file metadata
+     * @param id the file id to update metadata
+     * @param meta the new file metadata
+     */
+    // async updateMetadata(
+    //   id: string,
+    //   meta: Metadata
+    // ): Promise<{ data: Metadata | null; error: Error | null }> {
+    //   try {
+    //     const data = await post(`${this.url}/metadata/${id}`, { ...meta }, { headers: this.headers })
+    //     return { data, error: null }
+    //   } catch (error) {
+    //     return { data: null, error }
+    //   }
+    // }
+    /**
+     * Lists all the files within a bucket.
+     * @param path The folder path.
+     * @param options Search options, including `limit`, `offset`, `sortBy`, and `search`.
+     * @param parameters Fetch parameters, currently only supports `signal`, which is an AbortController's signal
+     */
+    list(path, options, parameters) {
+        return StorageFileApi_awaiter(this, void 0, void 0, function* () {
+            try {
+                const body = Object.assign(Object.assign(Object.assign({}, DEFAULT_SEARCH_OPTIONS), options), { prefix: path || '' });
+                const data = yield fetch_post(this.fetch, `${this.url}/object/list/${this.bucketId}`, body, { headers: this.headers }, parameters);
+                return { data, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+    _getFinalPath(path) {
+        return `${this.bucketId}/${path}`;
+    }
+    _removeEmptyFolders(path) {
+        return path.replace(/^\/|\/$/g, '').replace(/\/+/g, '/');
+    }
+}
+//# sourceMappingURL=StorageFileApi.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/storage-js/dist/module/StorageClient.js
+
+class StorageClient extends StorageBucketApi {
+    constructor(url, headers = {}, fetch) {
+        super(url, headers, fetch);
+    }
+    /**
+     * Perform file operation in a bucket.
+     *
+     * @param id The bucket id to operate on.
+     */
+    from(id) {
+        return new StorageFileApi(this.url, this.headers, id, this.fetch);
+    }
+}
+//# sourceMappingURL=StorageClient.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/functions-js/dist/module/helper.js
+var helper_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+const helper_resolveFetch = (customFetch) => {
+    let _fetch;
+    if (customFetch) {
+        _fetch = customFetch;
+    }
+    else if (typeof fetch === 'undefined') {
+        _fetch = (...args) => helper_awaiter(void 0, void 0, void 0, function* () { return yield (yield __webpack_require__.e(/* import() */ 165).then(__webpack_require__.t.bind(__webpack_require__, 4165, 23))).fetch(...args); });
+    }
+    else {
+        _fetch = fetch;
+    }
+    return (...args) => _fetch(...args);
+};
+//# sourceMappingURL=helper.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/functions-js/dist/module/index.js
+var module_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+class FunctionsClient {
+    constructor(url, { headers = {}, customFetch, } = {}) {
+        this.url = url;
+        this.headers = headers;
+        this.fetch = helper_resolveFetch(customFetch);
+    }
+    /**
+     * Updates the authorization header
+     * @params token - the new jwt token sent in the authorisation header
+     */
+    setAuth(token) {
+        this.headers.Authorization = `Bearer ${token}`;
+    }
+    /**
+     * Invokes a function
+     * @param functionName - the name of the function to invoke
+     * @param invokeOptions - object with the following properties
+     * `headers`: object representing the headers to send with the request
+     * `body`: the body of the request
+     * `responseType`: how the response should be parsed. The default is `json`
+     */
+    invoke(functionName, invokeOptions) {
+        return module_awaiter(this, void 0, void 0, function* () {
+            try {
+                const { headers, body } = invokeOptions !== null && invokeOptions !== void 0 ? invokeOptions : {};
+                const response = yield this.fetch(`${this.url}/${functionName}`, {
+                    method: 'POST',
+                    headers: Object.assign({}, this.headers, headers),
+                    body,
+                });
+                const isRelayError = response.headers.get('x-relay-error');
+                if (isRelayError && isRelayError === 'true') {
+                    return { data: null, error: new Error(yield response.text()) };
+                }
+                let data;
+                const { responseType } = invokeOptions !== null && invokeOptions !== void 0 ? invokeOptions : {};
+                if (!responseType || responseType === 'json') {
+                    data = yield response.json();
+                }
+                else if (responseType === 'arrayBuffer') {
+                    data = yield response.arrayBuffer();
+                }
+                else if (responseType === 'blob') {
+                    data = yield response.blob();
+                }
+                else {
+                    data = yield response.text();
+                }
+                return { data, error: null };
+            }
+            catch (error) {
+                return { data: null, error };
+            }
+        });
+    }
+}
+//# sourceMappingURL=index.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/supabase-js/dist/module/SupabaseClient.js
+var SupabaseClient_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+
+
+
+
+
+const SupabaseClient_DEFAULT_OPTIONS = {
+    schema: 'public',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    multiTab: true,
+    headers: DEFAULT_HEADERS,
+};
+/**
+ * Supabase Client.
+ *
+ * An isomorphic Javascript client for interacting with Postgres.
+ */
+class SupabaseClient {
+    /**
+     * Create a new client for use in the browser.
+     * @param supabaseUrl The unique Supabase URL which is supplied when you create a new project in your project dashboard.
+     * @param supabaseKey The unique Supabase Key which is supplied when you create a new project in your project dashboard.
+     * @param options.schema You can switch in between schemas. The schema needs to be on the list of exposed schemas inside Supabase.
+     * @param options.autoRefreshToken Set to "true" if you want to automatically refresh the token before expiring.
+     * @param options.persistSession Set to "true" if you want to automatically save the user session into local storage.
+     * @param options.detectSessionInUrl Set to "true" if you want to automatically detects OAuth grants in the URL and signs in the user.
+     * @param options.headers Any additional headers to send with each network request.
+     * @param options.realtime Options passed along to realtime-js constructor.
+     * @param options.multiTab Set to "false" if you want to disable multi-tab/window events.
+     * @param options.fetch A custom fetch implementation.
+     */
+    constructor(supabaseUrl, supabaseKey, options) {
+        this.supabaseUrl = supabaseUrl;
+        this.supabaseKey = supabaseKey;
+        if (!supabaseUrl)
+            throw new Error('supabaseUrl is required.');
+        if (!supabaseKey)
+            throw new Error('supabaseKey is required.');
+        const _supabaseUrl = stripTrailingSlash(supabaseUrl);
+        const settings = Object.assign(Object.assign({}, SupabaseClient_DEFAULT_OPTIONS), options);
+        this.restUrl = `${_supabaseUrl}/rest/v1`;
+        this.realtimeUrl = `${_supabaseUrl}/realtime/v1`.replace('http', 'ws');
+        this.authUrl = `${_supabaseUrl}/auth/v1`;
+        this.storageUrl = `${_supabaseUrl}/storage/v1`;
+        const isPlatform = _supabaseUrl.match(/(supabase\.co)|(supabase\.in)/);
+        if (isPlatform) {
+            const urlParts = _supabaseUrl.split('.');
+            this.functionsUrl = `${urlParts[0]}.functions.${urlParts[1]}.${urlParts[2]}`;
+        }
+        else {
+            this.functionsUrl = `${_supabaseUrl}/functions/v1`;
+        }
+        this.schema = settings.schema;
+        this.multiTab = settings.multiTab;
+        this.fetch = settings.fetch;
+        this.headers = Object.assign(Object.assign({}, DEFAULT_HEADERS), options === null || options === void 0 ? void 0 : options.headers);
+        this.shouldThrowOnError = settings.shouldThrowOnError || false;
+        this.auth = this._initSupabaseAuthClient(settings);
+        this.realtime = this._initRealtimeClient(Object.assign({ headers: this.headers }, settings.realtime));
+        this._listenForAuthEvents();
+        this._listenForMultiTabEvents();
+        // In the future we might allow the user to pass in a logger to receive these events.
+        // this.realtime.onOpen(() => console.log('OPEN'))
+        // this.realtime.onClose(() => console.log('CLOSED'))
+        // this.realtime.onError((e: Error) => console.log('Socket error', e))
+    }
+    /**
+     * Supabase Functions allows you to deploy and invoke edge functions.
+     */
+    get functions() {
+        return new FunctionsClient(this.functionsUrl, {
+            headers: this._getAuthHeaders(),
+            customFetch: this.fetch,
+        });
+    }
+    /**
+     * Supabase Storage allows you to manage user-generated content, such as photos or videos.
+     */
+    get storage() {
+        return new StorageClient(this.storageUrl, this._getAuthHeaders(), this.fetch);
+    }
+    /**
+     * Perform a table operation.
+     *
+     * @param table The table name to operate on.
+     */
+    from(table) {
+        const url = `${this.restUrl}/${table}`;
+        return new SupabaseQueryBuilder(url, {
+            headers: this._getAuthHeaders(),
+            schema: this.schema,
+            realtime: this.realtime,
+            table,
+            fetch: this.fetch,
+            shouldThrowOnError: this.shouldThrowOnError,
+        });
+    }
+    /**
+     * Perform a function call.
+     *
+     * @param fn  The function name to call.
+     * @param params  The parameters to pass to the function call.
+     * @param head   When set to true, no data will be returned.
+     * @param count  Count algorithm to use to count rows in a table.
+     *
+     */
+    rpc(fn, params, { head = false, count = null, } = {}) {
+        const rest = this._initPostgRESTClient();
+        return rest.rpc(fn, params, { head, count });
+    }
+    /**
+     * Closes and removes all subscriptions and returns a list of removed
+     * subscriptions and their errors.
+     */
+    removeAllSubscriptions() {
+        return SupabaseClient_awaiter(this, void 0, void 0, function* () {
+            const allSubs = this.getSubscriptions().slice();
+            const allSubPromises = allSubs.map((sub) => this.removeSubscription(sub));
+            const allRemovedSubs = yield Promise.all(allSubPromises);
+            return allRemovedSubs.map(({ error }, i) => {
+                return {
+                    data: { subscription: allSubs[i] },
+                    error,
+                };
+            });
+        });
+    }
+    /**
+     * Closes and removes a subscription and returns the number of open subscriptions.
+     *
+     * @param subscription The subscription you want to close and remove.
+     */
+    removeSubscription(subscription) {
+        return SupabaseClient_awaiter(this, void 0, void 0, function* () {
+            const { error } = yield this._closeSubscription(subscription);
+            const allSubs = this.getSubscriptions();
+            const openSubCount = allSubs.filter((chan) => chan.isJoined()).length;
+            if (allSubs.length === 0)
+                yield this.realtime.disconnect();
+            return { data: { openSubscriptions: openSubCount }, error };
+        });
+    }
+    _closeSubscription(subscription) {
+        return SupabaseClient_awaiter(this, void 0, void 0, function* () {
+            let error = null;
+            if (!subscription.isClosed()) {
+                const { error: unsubError } = yield this._unsubscribeSubscription(subscription);
+                error = unsubError;
+            }
+            this.realtime.remove(subscription);
+            return { error };
+        });
+    }
+    _unsubscribeSubscription(subscription) {
+        return new Promise((resolve) => {
+            subscription
+                .unsubscribe()
+                .receive('ok', () => resolve({ error: null }))
+                .receive('error', (error) => resolve({ error }))
+                .receive('timeout', () => resolve({ error: new Error('timed out') }));
+        });
+    }
+    /**
+     * Returns an array of all your subscriptions.
+     */
+    getSubscriptions() {
+        return this.realtime.channels;
+    }
+    _initSupabaseAuthClient({ autoRefreshToken, persistSession, detectSessionInUrl, localStorage, headers, fetch, cookieOptions, multiTab, }) {
+        const authHeaders = {
+            Authorization: `Bearer ${this.supabaseKey}`,
+            apikey: `${this.supabaseKey}`,
+        };
+        return new SupabaseAuthClient({
+            url: this.authUrl,
+            headers: Object.assign(Object.assign({}, headers), authHeaders),
+            autoRefreshToken,
+            persistSession,
+            detectSessionInUrl,
+            localStorage,
+            fetch,
+            cookieOptions,
+            multiTab,
+        });
+    }
+    _initRealtimeClient(options) {
+        return new RealtimeClient(this.realtimeUrl, Object.assign(Object.assign({}, options), { params: Object.assign(Object.assign({}, options === null || options === void 0 ? void 0 : options.params), { apikey: this.supabaseKey }) }));
+    }
+    _initPostgRESTClient() {
+        return new PostgrestClient(this.restUrl, {
+            headers: this._getAuthHeaders(),
+            schema: this.schema,
+            fetch: this.fetch,
+            throwOnError: this.shouldThrowOnError,
+        });
+    }
+    _getAuthHeaders() {
+        var _a, _b;
+        const headers = Object.assign({}, this.headers);
+        const authBearer = (_b = (_a = this.auth.session()) === null || _a === void 0 ? void 0 : _a.access_token) !== null && _b !== void 0 ? _b : this.supabaseKey;
+        headers['apikey'] = this.supabaseKey;
+        headers['Authorization'] = headers['Authorization'] || `Bearer ${authBearer}`;
+        return headers;
+    }
+    _listenForMultiTabEvents() {
+        if (!this.multiTab || !isBrowser() || !(window === null || window === void 0 ? void 0 : window.addEventListener)) {
+            return null;
+        }
+        try {
+            return window === null || window === void 0 ? void 0 : window.addEventListener('storage', (e) => {
+                var _a, _b, _c;
+                if (e.key === STORAGE_KEY) {
+                    const newSession = JSON.parse(String(e.newValue));
+                    const accessToken = (_b = (_a = newSession === null || newSession === void 0 ? void 0 : newSession.currentSession) === null || _a === void 0 ? void 0 : _a.access_token) !== null && _b !== void 0 ? _b : undefined;
+                    const previousAccessToken = (_c = this.auth.session()) === null || _c === void 0 ? void 0 : _c.access_token;
+                    if (!accessToken) {
+                        this._handleTokenChanged('SIGNED_OUT', accessToken, 'STORAGE');
+                    }
+                    else if (!previousAccessToken && accessToken) {
+                        this._handleTokenChanged('SIGNED_IN', accessToken, 'STORAGE');
+                    }
+                    else if (previousAccessToken !== accessToken) {
+                        this._handleTokenChanged('TOKEN_REFRESHED', accessToken, 'STORAGE');
+                    }
+                }
+            });
+        }
+        catch (error) {
+            console.error('_listenForMultiTabEvents', error);
+            return null;
+        }
+    }
+    _listenForAuthEvents() {
+        let { data } = this.auth.onAuthStateChange((event, session) => {
+            this._handleTokenChanged(event, session === null || session === void 0 ? void 0 : session.access_token, 'CLIENT');
+        });
+        return data;
+    }
+    _handleTokenChanged(event, token, source) {
+        if ((event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') &&
+            this.changedAccessToken !== token) {
+            // Token has changed
+            this.realtime.setAuth(token);
+            // Ideally we should call this.auth.recoverSession() - need to make public
+            // to trigger a "SIGNED_IN" event on this client.
+            if (source == 'STORAGE')
+                this.auth.setAuth(token);
+            this.changedAccessToken = token;
+        }
+        else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            // Token is removed
+            this.realtime.setAuth(this.supabaseKey);
+            if (source == 'STORAGE')
+                this.auth.signOut();
+        }
+    }
+}
+//# sourceMappingURL=SupabaseClient.js.map
+;// CONCATENATED MODULE: ./node_modules/@supabase/supabase-js/dist/module/index.js
+
+
+
+/**
+ * Creates a new Supabase Client.
+ */
+const createClient = (supabaseUrl, supabaseKey, options) => {
+    return new SupabaseClient(supabaseUrl, supabaseKey, options);
+};
+
+//# sourceMappingURL=index.js.map
+;// CONCATENATED MODULE: ./src/api/client.js
+
+const supabase = createClient('https://coinnqngrwlwlfhwtkih.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTYzNTI0Nzg1MCwiZXhwIjoxOTUwODIzODUwfQ.bsG7ieEq9-tpfwACvQ_T-5DTU-xWyX2fWb3JezQFqdg');
+const addSubscription = (session, dbTable, callback) => {
+  return supabase.from(`${dbTable}:session_name=eq.${session}`).on('*', payload => {
+    console.log(`${dbTable} change received`, payload);
+    callback(payload);
+  }).subscribe();
+};
+const removeSubscription = subscriptionId => {
+  supabase.removeSubscription(subscriptionId);
+};
+})();
+
+module.exports = __webpack_exports__;
+/******/ })()
+;

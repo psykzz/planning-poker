@@ -1,0 +1,42 @@
+[
+    {
+        "functionRoute": "client",
+        "pluginName": "default-site-plugin",
+        "originalAbsoluteFilePath": "/home/runner/work/planning-poker/planning-poker/src/api/client.js",
+        "originalRelativeFilePath": "client.js",
+        "relativeCompiledFilePath": "client.js",
+        "absoluteCompiledFilePath": "/home/runner/work/planning-poker/planning-poker/.cache/functions/client.js"
+    },
+    {
+        "functionRoute": "options",
+        "pluginName": "default-site-plugin",
+        "originalAbsoluteFilePath": "/home/runner/work/planning-poker/planning-poker/src/api/options.js",
+        "originalRelativeFilePath": "options.js",
+        "relativeCompiledFilePath": "options.js",
+        "absoluteCompiledFilePath": "/home/runner/work/planning-poker/planning-poker/.cache/functions/options.js"
+    },
+    {
+        "functionRoute": "scores",
+        "pluginName": "default-site-plugin",
+        "originalAbsoluteFilePath": "/home/runner/work/planning-poker/planning-poker/src/api/scores.js",
+        "originalRelativeFilePath": "scores.js",
+        "relativeCompiledFilePath": "scores.js",
+        "absoluteCompiledFilePath": "/home/runner/work/planning-poker/planning-poker/.cache/functions/scores.js"
+    },
+    {
+        "functionRoute": "time",
+        "pluginName": "default-site-plugin",
+        "originalAbsoluteFilePath": "/home/runner/work/planning-poker/planning-poker/src/api/time.js",
+        "originalRelativeFilePath": "time.js",
+        "relativeCompiledFilePath": "time.js",
+        "absoluteCompiledFilePath": "/home/runner/work/planning-poker/planning-poker/.cache/functions/time.js"
+    },
+    {
+        "functionRoute": "users",
+        "pluginName": "default-site-plugin",
+        "originalAbsoluteFilePath": "/home/runner/work/planning-poker/planning-poker/src/api/users.js",
+        "originalRelativeFilePath": "users.js",
+        "relativeCompiledFilePath": "users.js",
+        "absoluteCompiledFilePath": "/home/runner/work/planning-poker/planning-poker/.cache/functions/users.js"
+    }
+]

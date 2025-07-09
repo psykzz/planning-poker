@@ -54,9 +54,12 @@ typings/
 # dotenv environment variable files
 .env*
 
-# gatsby files
-.cache/
-public
+# Next.js build output
+.next/
+out/
+
+# Vite build output
+dist/
 
 # Mac files
 .DS_Store
