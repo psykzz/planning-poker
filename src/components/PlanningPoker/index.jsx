@@ -1,5 +1,5 @@
 import React from 'react';
-import { Helmet } from 'react-helmet';
+import Head from 'next/head';
 import { toast } from 'react-toastify';
 import { useCopyToClipboard } from 'react-use';
 import { addSubscription, removeSubscription } from '../../api/client';
@@ -216,9 +216,9 @@ export const PlanningPoker = ({ session, user: localUser }) => {
 
   return (
     <>
-      <Helmet>
+      <Head>
         <title>Planning Poker - {session}</title>
-      </Helmet>
+      </Head>
       <CopySession sessionId={session} />
       <UserList me={user} users={users} scores={scores} />
       <ScoreCards session={session} options={POINT_SEQUENCES[sequence]} />
