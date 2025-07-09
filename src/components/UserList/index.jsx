@@ -105,8 +105,9 @@ export const UserList = ({ me, users, scores }) => {
   const User = ({ user }) => {
     const isMe = user.id === me?.id;
     const score = scoreByUser[user.id];
+    const hasSubmittedScore = !!score;
     return (
-      <div key={user.id} className={`${styles.user} ${isMe && styles.self}`}>
+      <div key={user.id} className={`${styles.user} ${isMe && styles.self} ${hasSubmittedScore && styles.has_score}`}>
         <div
           className={`${styles.name} ${isMe && styles.me}`}
           onClick={() =>

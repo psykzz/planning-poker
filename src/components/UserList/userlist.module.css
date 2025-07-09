@@ -19,7 +19,7 @@
     display: block;
   }
 
-  .user_list:not(.show_scores) .user:not(.self) {
+  .user_list:not(.show_scores) .user:not(.self):not(.has_score) {
     display: none;
   }
 
