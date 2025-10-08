@@ -6,11 +6,13 @@
   Planning Poker
 </h1>
 
-A planning poker is built with Gatsby and React.
+A planning poker application built with Next.js and React.
 
 _Have an idea you want to suggest? Pull requests are welcome._
 
 ## 🚀 Quick start
+
+### Next.js (Primary Framework)
 
 1.  **Start developing.**
 
@@ -18,30 +20,53 @@ _Have an idea you want to suggest? Pull requests are welcome._
 
     ```shell
     git clone <url> .
-    npx gatsby develop
+    npm install
+    npm run dev
     ```
 
-1.  **Open the source code and start editing!**
+2.  **Open the source code and start editing!**
 
-    Your site is now running at `http://localhost:8000`!
-
-    _Note: You'll also see a second link: _`http://localhost:8000/___graphql`_. This is a tool you can use to experiment with querying your data. Learn more about using this tool in the [Gatsby tutorial](https://www.gatsbyjs.com/tutorial/part-five/#introducing-graphiql)._
+    Your site is now running at `http://localhost:3000/planning-poker`!
 
     Any changes you make will be updated in real time!
 
+### Vite (Alternative Development)
+
+For faster development builds, you can optionally use Vite:
+
+```shell
+npm run vite:dev
+```
+
+This will run on `http://localhost:3001/planning-poker`
+
+## 📦 Build and Deploy
+
+### Next.js Build
+```shell
+npm run build
+npm run start
+```
+
+### Vite Build
+```shell
+npm run vite:build
+npm run vite:preview
+```
+
 ## 🧐 What's inside?
 
-A quick look at the top-level files and directories you'll see in a Gatsby project.
+A quick look at the top-level files and directories you'll see in this Next.js project.
 
     .
     ├── node_modules
+    ├── pages
     ├── src
+    ├── static
     ├── .gitignore
     ├── .prettierrc
-    ├── gatsby-browser.js
-    ├── gatsby-config.js
-    ├── gatsby-node.js
-    ├── gatsby-ssr.js
+    ├── next.config.js
+    ├── vite.config.js
     ├── LICENSE
     ├── package-lock.json
     ├── package.json
