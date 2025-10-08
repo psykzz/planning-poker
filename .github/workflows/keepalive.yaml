@@ -35,7 +35,11 @@ jobs:
             try {
               // Import Supabase client
               const { createClient } = require('@supabase/supabase-js');
-              const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+              
+              const supabase = createClient(
+                'https://coinnqngrwlwlfhwtkih.supabase.co',
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTYzNTI0Nzg1MCwiZXhwIjoxOTUwODIzODUwfQ.bsG7ieEq9-tpfwACvQ_T-5DTU-xWyX2fWb3JezQFqdg'
+              );
 
               // Ping Supabase by querying a table (e.g., 'songs')
               const { data, error } = await supabase.from('users').select('*').limit(10);
