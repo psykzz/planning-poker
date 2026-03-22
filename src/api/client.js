@@ -6,15 +6,25 @@ export const supabase = createClient(
 );
 
 export const addSubscription = (session, dbTable, callback) => {
-  return supabase
-    .from(`${dbTable}:session_name=eq.${session}`)
-    .on('*', payload => {
-      console.log(`${dbTable} change received`, payload);
-      callback(payload);
-    })
+  const channel = supabase
+    .channel(`${dbTable}-${session}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: dbTable,
+        filter: `session_name=eq.${session}`,
+      },
+      payload => {
+        console.log(`${dbTable} change received`, payload);
+        callback(payload);
+      }
+    )
     .subscribe();
+  return channel;
 };
 
-export const removeSubscription = subscriptionId => {
-  supabase.removeSubscription(subscriptionId);
+export const removeSubscription = channel => {
+  supabase.removeChannel(channel);
 };
