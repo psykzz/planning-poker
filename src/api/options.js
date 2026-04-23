@@ -13,7 +13,7 @@ export const submitOption = async (session, optionKey, value) => {
       { key: optionKey, value: value?.toString() || '', session_name: session },
     ]);
 
-  if (error && !Array.isArray(error)) {
+  if (error) {
     const errStr = JSON.stringify(error);
     throw new Error(errStr);
   }
@@ -26,7 +26,7 @@ export const fetchOption = async (session, optionKey, defaultValue) => {
     .eq('session_name', session)
     .eq('key', optionKey);
 
-  if (error && !Array.isArray(error)) {
+  if (error) {
     const errStr = JSON.stringify(error);
     throw new Error(errStr);
   }

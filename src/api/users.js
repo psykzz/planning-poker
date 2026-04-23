@@ -3,9 +3,10 @@ import { supabase } from './client';
 export const createUser = async (session, username) => {
   const { data: newUser, error } = await supabase
     .from('users')
-    .insert([{ name: username, session_name: session }]);
+    .insert([{ name: username, session_name: session }])
+    .select();
 
-  if (error && !Array.isArray(error)) {
+  if (error) {
     throw new Error(JSON.stringify(error));
   }
 
@@ -19,7 +20,7 @@ export const updateUserPresence = async (session, userId, last_presence) => {
     .update({ last_presence, session_name: session })
     .eq('id', userId);
 
-  if (error && !Array.isArray(error)) {
+  if (error) {
     throw new Error(JSON.stringify(error));
   }
 };
@@ -30,7 +31,7 @@ export const fetchAllUsers = async session => {
     .select('*')
     .eq('session_name', session);
 
-  if (error && !Array.isArray(error)) {
+  if (error) {
     throw new Error(JSON.stringify(error));
   }
 
@@ -45,7 +46,7 @@ export const fetchUser = async userId => {
     .select('*')
     .eq('id', userId);
 
-  if (error && !Array.isArray(error)) {
+  if (error) {
     throw new Error(JSON.stringify(error));
   }
 
