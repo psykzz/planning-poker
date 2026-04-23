@@ -1,16 +1,31 @@
 import { supabase } from './client';
 
-export const createUser = async (session, username) => {
+export const createUser = async (session, user) => {
+  if (!user?.id || !user?.name) {
+    throw new Error('User id and name are required');
+  }
+
   const { data: newUser, error } = await supabase
     .from('users')
-    .insert([{ name: username, session_name: session }])
-    .select();
+    .upsert(
+      [
+        {
+          id: user.id,
+          name: user.name,
+          session_name: session,
+          last_presence: new Date().toISOString(),
+        },
+      ],
+      { onConflict: 'id' },
+    )
+    .select()
+    .single();
 
   if (error) {
     throw new Error(JSON.stringify(error));
   }
 
-  return newUser[0];
+  return newUser;
 };
 
 export const updateUserPresence = async (session, userId, last_presence) => {

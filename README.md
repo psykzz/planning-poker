@@ -10,56 +10,40 @@ A planning poker application built with Next.js and React.
 
 _Have an idea you want to suggest? Pull requests are welcome._
 
-## 🚀 Quick start
+## Quick start
 
-### Next.js (Primary Framework)
-
-1.  **Start developing.**
-
-    Clone the repo, and start developing.
-
-    ```shell
-    git clone <url> .
-    npm install
-    npm run dev
-    ```
-
-2.  **Open the source code and start editing!**
-
-    Your site is now running at `http://localhost:3000/`!
-
-    Any changes you make will be updated in real time!
-
-### Vite (Alternative Development)
-
-For faster development builds, you can optionally use Vite:
+1. Clone the repo and install dependencies.
 
 ```shell
-npm run vite:dev
+git clone <url> .
+npm install
 ```
 
-This will run on `http://localhost:3001/`
+2. Start the development server.
 
-## 📦 Build and Deploy
+```shell
+npm run dev
+```
 
-### Next.js Build
+3. Open `http://localhost:3000/`.
+
+## Build and deploy
+
+Build the app:
 
 ```shell
 npm run build
+```
+
+Start the production server:
+
+```shell
 npm run start
 ```
 
-### Vite Build
+### Netlify deployment
 
-```shell
-npm run vite:build
-npm run vite:preview
-```
-
-
-### Netlify Deployment
-
-The repo includes a `netlify.toml` that configures Netlify to build with Next.js using the [Essential Next.js plugin](https://github.com/opennextjs/opennextjs-netlify):
+The repo includes a `netlify.toml` that configures Netlify to build with Next.js using the Essential Next.js plugin:
 
 ```toml
 [build]
@@ -70,52 +54,41 @@ The repo includes a `netlify.toml` that configures Netlify to build with Next.js
   package = "@netlify/plugin-nextjs"
 ```
 
-Netlify will automatically install `@netlify/plugin-nextjs` at build time — no manual install needed. Connect the repo in the Netlify dashboard and it will pick up the config automatically.
+Netlify will automatically install `@netlify/plugin-nextjs` at build time. If you need to deploy under a subpath such as `/planning-poker`, set `DEPLOY_TARGET=planning-poker` for the build.
 
-If you need to deploy under a subpath such as `/planning-poker`, set `DEPLOY_TARGET=planning-poker` for the build.
+## Supabase schema
 
-## 🧐 What's inside?
+The app reads and writes directly to Supabase from the browser, and expects three public tables:
 
-A quick look at the top-level files and directories you'll see in this Next.js project.
+- `users`: session members and their `last_presence`
+- `scores`: one score per user per session
+- `options`: per-session settings such as the point sequence
 
-    .
-    ├── node_modules
-    ├── pages
-    ├── src
-    ├── static
-    ├── .gitignore
-    ├── .prettierrc
-    ├── eslint.config.js
-    ├── next.config.mjs
-    ├── netlify.toml
-    ├── vite.config.js
-    ├── LICENSE
-    ├── package-lock.json
-    ├── package.json
-    └── README.md
+To recreate the schema, run [supabase/schema.sql](supabase/schema.sql) in the Supabase SQL editor. The script:
 
-1.  **`/node_modules`**: This directory contains all of the modules of code that your project depends on (npm packages) are automatically installed.
+- recreates the `users`, `scores`, and `options` tables
+- adds `created_at` and `updated_at` columns for debugging
+- creates the composite keys required by the app's `upsert()` calls
+- enables RLS with permissive anon/authenticated policies so the current client continues to work
+- adds `scores` and `options` to `supabase_realtime`
 
-2.  **`/pages`**: Next.js pages directory. Each file becomes a route in the application.
+## Project structure
 
-3.  **`/src`**: This directory will contain all of the code related to what you will see on the front-end of your site (what you see in the browser) such as your site header or a page template. `src` is a convention for "source code".
+```text
+.
+├── pages
+├── src
+├── static
+├── supabase
+├── eslint.config.js
+├── next.config.mjs
+├── netlify.toml
+├── package-lock.json
+├── package.json
+└── README.md
+```
 
-4.  **`.gitignore`**: This file tells git which files it should not track / not maintain a version history for.
-
-5.  **`.prettierrc`**: This is a configuration file for [Prettier](https://prettier.io/). Prettier is a tool to help keep the formatting of your code consistent.
-
-6.  **`eslint.config.js`**: ESLint flat config using `eslint-config-next`.
-
-7.  **`next.config.mjs`**: Next.js configuration — sets the base path, asset prefix, and packages to transpile.
-
-8.  **`netlify.toml`**: Netlify build configuration — tells Netlify to run `next build` and publish from `.next` using the Next.js plugin.
-
-9.  **`vite.config.js`**: Optional Vite configuration for alternative development builds.
-
-10. **`LICENSE`**: This project is licensed under the 0BSD license.
-
-11. **`package-lock.json`** (See `package.json` below, first). This is an automatically generated file based on the exact versions of your npm dependencies that were installed for your project. **(You won't change this file directly).**
-
-12. **`package.json`**: A manifest file for Node.js projects, which includes things like metadata (the project's name, author, etc). This manifest is how npm knows which packages to install for your project.
-
-13. **`README.md`**: A text file containing useful reference information about your project.
+- `pages`: Next.js pages and API routes
+- `src`: application components and client-side API helpers
+- `static`: static assets
+- `supabase`: SQL schema for the backing database

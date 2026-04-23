@@ -12,12 +12,7 @@ import {
   OPT_POINT_KEY,
 } from '../../api/options';
 import { fetchScores, updateAllScores } from '../../api/scores';
-import {
-  createUser,
-  fetchAllUsers,
-  fetchUser,
-  updateUserPresence,
-} from '../../api/users';
+import { createUser, fetchAllUsers, updateUserPresence } from '../../api/users';
 import { ModeratorControls } from '../ModeratorControls';
 import { ScoreCards } from '../ScoreCards';
 import { UserList } from '../UserList';
@@ -87,17 +82,17 @@ export const PlanningPoker = ({ session, user: localUser }) => {
   };
 
   const updatePresence = React.useCallback(async (session, user) => {
+    if (!user?.id) return;
     await updateUserPresence(session, user.id, new Date().toISOString());
     await updateUsers(session);
   }, []);
 
   const getOrCreateUser = async (session, user) => {
-    const existingUser = await fetchUser(user.id);
-    if (existingUser) {
-      setUser(existingUser);
+    if (!user?.id || !user?.name) {
       return;
     }
-    const newUser = await createUser(session, user.name);
+
+    const newUser = await createUser(session, user);
     setUser(newUser);
   };
 
@@ -177,7 +172,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
   }, [session, user]);
 
   React.useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
     const interval = setInterval(() => {
       updatePresence(session, user);
     }, 10000);
@@ -187,6 +182,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
   }, [user, session, updatePresence]);
 
   React.useEffect(() => {
+    if (!user?.id) return;
     const onFocus = () => updatePresence(session, user);
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);

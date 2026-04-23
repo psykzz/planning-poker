@@ -1,3 +1,7 @@
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)));
 const deployTarget = process.env.DEPLOY_TARGET?.trim();
 const deployBasePath = deployTarget ? `/${deployTarget}` : undefined;
 

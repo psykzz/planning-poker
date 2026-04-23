@@ -5,23 +5,37 @@ import * as styles from './hero.module.css';
 
 export const Hero = () => {
   const [session, setSession] = React.useState('');
-  const [user, setUser] = React.useState({});
+  const [user, setUser] = React.useState();
+
+  const normalizeUser = React.useCallback(storedUser => {
+    if (!storedUser?.name) return;
+    return {
+      id: storedUser.id || globalThis.crypto.randomUUID(),
+      name: storedUser.name,
+    };
+  }, []);
 
   const onHashChange = () => {
     setSession(window.location.hash.slice(1));
   };
 
   const createOrRestoreUser = () => {
-    const storedUser = JSON.parse(localStorage.getItem('user'));
+    const storedUser = normalizeUser(JSON.parse(localStorage.getItem('user')));
     if (storedUser) {
       setUser(storedUser);
       return;
     }
+
     let name = '';
     while (name === '' || !name) {
       name = prompt('Please enter your name');
     }
-    setUser({ name });
+
+    setUser(
+      normalizeUser({
+        name,
+      }),
+    );
   };
 
   React.useEffect(() => {
@@ -30,10 +44,10 @@ export const Hero = () => {
     createOrRestoreUser();
 
     return () => window.removeEventListener('hashchange', onHashChange);
-  }, []);
+  }, [normalizeUser]);
 
   React.useEffect(() => {
-    if (user === {}) {
+    if (!user?.id || !user?.name) {
       return;
     }
 
