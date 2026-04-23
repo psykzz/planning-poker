@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.1",
-    "nanoid": "^3.3.11",
+    "nanoid": "^5.1.9",
     "next": "^15.0.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

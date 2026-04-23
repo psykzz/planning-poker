@@ -7,6 +7,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  transpilePackages: ['nanoid'],
 };
 
 module.exports = nextConfig;
