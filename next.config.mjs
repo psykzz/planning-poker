@@ -10,4 +10,4 @@ const nextConfig = {
   transpilePackages: ['nanoid'],
 };
 
-module.exports = nextConfig;
+export default nextConfig;
