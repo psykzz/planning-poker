@@ -13,13 +13,13 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'vite-index.html'),
+        main: resolve(import.meta.dirname, 'vite-index.html'),
       },
     },
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
+      '@': resolve(import.meta.dirname, './src'),
     },
   },
   server: {
