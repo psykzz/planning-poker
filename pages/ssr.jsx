@@ -8,7 +8,7 @@ const TestTemplate = ({ serverData }) => {
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     fetch(`https://poker.psykzz.dev/api/time?${params}`).then(res =>
-      res.json().then(data => setApiData(data))
+      res.json().then(data => setApiData(data)),
     );
   }, []);
 
@@ -57,7 +57,7 @@ export const getServerSideProps = async ({ query, res }) => {
     'Cache-Control',
     `public, max-age=${query.age ?? 5}, s-maxage=${
       query.sage ?? 15
-    }, stale-while-revalidate=${query.swr ?? 30}`
+    }, stale-while-revalidate=${query.swr ?? 30}`,
   );
 
   // Return props
@@ -71,8 +71,8 @@ export const getServerSideProps = async ({ query, res }) => {
         age: query.age ?? 5,
         sage: query.sage ?? 15,
         swr: query.swr ?? 30,
-      }
-    }
+      },
+    },
   };
 };
 

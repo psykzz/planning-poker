@@ -43,9 +43,9 @@ const CopySession = session => {
   const copySessionId = React.useCallback(
     () =>
       copyToClipboard(
-        `${window.location.origin}${window.location.pathname}#${session.sessionId}`
+        `${window.location.origin}${window.location.pathname}#${session.sessionId}`,
       ),
-    [session, copyToClipboard]
+    [session, copyToClipboard],
   );
   React.useEffect(() => {
     state.value && toast.success(`Copied ${state.value}!`);
@@ -62,7 +62,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
   const [users, setUsers] = React.useState([]);
   const [scores, setScores] = React.useState([]);
   const [confirmEnabled, setConfirmEnabled] = React.useState(
-    OPT_CONFIRM_DEFAULT === 'true'
+    OPT_CONFIRM_DEFAULT === 'true',
   );
   const [sequence, setSequence] = React.useState(OPT_POINT_SEQ_DEFAULT);
 
@@ -81,7 +81,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
     const activeUsers = users.filter(
       user =>
         parseISOString(user.last_presence) >
-        now.setSeconds(now.getSeconds() - afkSeconds)
+        now.setSeconds(now.getSeconds() - afkSeconds),
     );
     setUsers(activeUsers);
   };
@@ -128,7 +128,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
     const pointSequence = await fetchOption(
       session,
       OPT_POINT_KEY,
-      OPT_POINT_SEQ_DEFAULT
+      OPT_POINT_SEQ_DEFAULT,
     );
     setSequence(pointSequence);
     // Confirm option is per-user, so not set for all users in session
@@ -199,7 +199,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
         updateAllScores(session, !showScores);
       }
     },
-    [session, showScores]
+    [session, showScores],
   );
 
   const toggleConfirm = React.useCallback(() => {

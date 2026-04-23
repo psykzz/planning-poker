@@ -23,7 +23,7 @@ export const ScoreCards = ({ options, session }) => {
 
     if (value !== deleteValue) {
       const cardElement = document.getElementById(
-        `score_val_${ICON_SCORE_MAP[value] || value}`
+        `score_val_${ICON_SCORE_MAP[value] || value}`,
       );
       if (cardElement) {
         cardElement.style.backgroundColor = 'var(--bg-color-2)';

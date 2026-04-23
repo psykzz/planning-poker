@@ -43,12 +43,14 @@ This will run on `http://localhost:3001/planning-poker`
 ## 📦 Build and Deploy
 
 ### Next.js Build
+
 ```shell
 npm run build
 npm run start
 ```
 
 ### Vite Build
+
 ```shell
 npm run vite:build
 npm run vite:preview

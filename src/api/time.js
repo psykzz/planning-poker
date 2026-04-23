@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     'Cache-Control',
     `public, max-age=${req.query.age ?? 5}, s-maxage=${
       req.query.sage ?? 15
-    }, stale-while-revalidate=${req.query.swr ?? 30}`
+    }, stale-while-revalidate=${req.query.swr ?? 30}`,
   );
 
   const data = await (
