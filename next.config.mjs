@@ -19,6 +19,9 @@ const nextConfig = {
     unoptimized: true,
   },
   transpilePackages: ['nanoid'],
+  turbopack: {
+    root: projectRoot,
+  },
 };
 
 export default nextConfig;
