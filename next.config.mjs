@@ -1,8 +1,15 @@
+const deployTarget = process.env.DEPLOY_TARGET?.trim();
+const deployBasePath = deployTarget ? `/${deployTarget}` : undefined;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  basePath: '/planning-poker',
-  assetPrefix: '/planning-poker',
+  ...(deployBasePath
+    ? {
+        basePath: deployBasePath,
+        assetPrefix: deployBasePath,
+      }
+    : {}),
   trailingSlash: true,
   images: {
     unoptimized: true,

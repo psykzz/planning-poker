@@ -26,7 +26,7 @@ _Have an idea you want to suggest? Pull requests are welcome._
 
 2.  **Open the source code and start editing!**
 
-    Your site is now running at `http://localhost:3000/planning-poker`!
+    Your site is now running at `http://localhost:3000/`!
 
     Any changes you make will be updated in real time!
 
@@ -38,7 +38,7 @@ For faster development builds, you can optionally use Vite:
 npm run vite:dev
 ```
 
-This will run on `http://localhost:3001/planning-poker`
+This will run on `http://localhost:3001/`
 
 ## 📦 Build and Deploy
 
@@ -71,6 +71,8 @@ The repo includes a `netlify.toml` that configures Netlify to build with Next.js
 ```
 
 Netlify will automatically install `@netlify/plugin-nextjs` at build time — no manual install needed. Connect the repo in the Netlify dashboard and it will pick up the config automatically.
+
+If you need to deploy under a subpath such as `/planning-poker`, set `DEPLOY_TARGET=planning-poker` for the build.
 
 ## 🧐 What's inside?
 
