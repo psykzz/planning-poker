@@ -1,5 +1,5 @@
 import React from 'react';
-import { Helmet } from 'react-helmet';
+import Head from 'next/head';
 import { toast } from 'react-toastify';
 import { useCopyToClipboard } from 'react-use';
 import { addSubscription, removeSubscription } from '../../api/client';
@@ -12,12 +12,7 @@ import {
   OPT_POINT_KEY,
 } from '../../api/options';
 import { fetchScores, updateAllScores } from '../../api/scores';
-import {
-  createUser,
-  fetchAllUsers,
-  fetchUser,
-  updateUserPresence,
-} from '../../api/users';
+import { createUser, fetchAllUsers, updateUserPresence } from '../../api/users';
 import { ModeratorControls } from '../ModeratorControls';
 import { ScoreCards } from '../ScoreCards';
 import { UserList } from '../UserList';
@@ -43,9 +38,9 @@ const CopySession = session => {
   const copySessionId = React.useCallback(
     () =>
       copyToClipboard(
-        `${window.location.origin}${window.location.pathname}#${session.sessionId}`
+        `${window.location.origin}${window.location.pathname}#${session.sessionId}`,
       ),
-    [session, copyToClipboard]
+    [session, copyToClipboard],
   );
   React.useEffect(() => {
     state.value && toast.success(`Copied ${state.value}!`);
@@ -62,7 +57,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
   const [users, setUsers] = React.useState([]);
   const [scores, setScores] = React.useState([]);
   const [confirmEnabled, setConfirmEnabled] = React.useState(
-    OPT_CONFIRM_DEFAULT === 'true'
+    OPT_CONFIRM_DEFAULT === 'true',
   );
   const [sequence, setSequence] = React.useState(OPT_POINT_SEQ_DEFAULT);
 
@@ -81,23 +76,23 @@ export const PlanningPoker = ({ session, user: localUser }) => {
     const activeUsers = users.filter(
       user =>
         parseISOString(user.last_presence) >
-        now.setSeconds(now.getSeconds() - afkSeconds)
+        now.setSeconds(now.getSeconds() - afkSeconds),
     );
     setUsers(activeUsers);
   };
 
   const updatePresence = React.useCallback(async (session, user) => {
+    if (!user?.id) return;
     await updateUserPresence(session, user.id, new Date().toISOString());
     await updateUsers(session);
   }, []);
 
   const getOrCreateUser = async (session, user) => {
-    const existingUser = await fetchUser(user.id);
-    if (existingUser) {
-      setUser(existingUser);
+    if (!user?.id || !user?.name) {
       return;
     }
-    const newUser = await createUser(session, user.name);
+
+    const newUser = await createUser(session, user);
     setUser(newUser);
   };
 
@@ -128,7 +123,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
     const pointSequence = await fetchOption(
       session,
       OPT_POINT_KEY,
-      OPT_POINT_SEQ_DEFAULT
+      OPT_POINT_SEQ_DEFAULT,
     );
     setSequence(pointSequence);
     // Confirm option is per-user, so not set for all users in session
@@ -177,7 +172,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
   }, [session, user]);
 
   React.useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
     const interval = setInterval(() => {
       updatePresence(session, user);
     }, 10000);
@@ -187,6 +182,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
   }, [user, session, updatePresence]);
 
   React.useEffect(() => {
+    if (!user?.id) return;
     const onFocus = () => updatePresence(session, user);
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
@@ -199,7 +195,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
         updateAllScores(session, !showScores);
       }
     },
-    [session, showScores]
+    [session, showScores],
   );
 
   const toggleConfirm = React.useCallback(() => {
@@ -216,9 +212,9 @@ export const PlanningPoker = ({ session, user: localUser }) => {
 
   return (
     <>
-      <Helmet>
+      <Head>
         <title>Planning Poker - {session}</title>
-      </Helmet>
+      </Head>
       <CopySession sessionId={session} />
       <UserList me={user} users={users} scores={scores} />
       <ScoreCards session={session} options={POINT_SEQUENCES[sequence]} />

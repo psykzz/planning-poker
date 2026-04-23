@@ -21,7 +21,7 @@ export const submitScore = async (session, userId, score) => {
     },
   ]);
 
-  if (error && !Array.isArray(error)) {
+  if (error) {
     throw new Error(JSON.stringify(error));
   }
 };
@@ -32,7 +32,7 @@ export const deleteScore = async (session, userId) => {
     .delete()
     .match({ session_name: session, user_id: userId });
 
-  if (error && !Array.isArray(error)) {
+  if (error) {
     throw new Error(JSON.stringify(error));
   }
 };
@@ -43,7 +43,7 @@ export const resetScores = async session => {
     .delete()
     .match({ session_name: session });
 
-  if (error && !Array.isArray(error)) {
+  if (error) {
     throw new Error(JSON.stringify(error));
   }
 };
@@ -54,7 +54,7 @@ export const updateAllScores = async (session, revealed) => {
     .update({ revealed })
     .eq('session_name', session);
 
-  if (error && !Array.isArray(error)) {
+  if (error) {
     throw new Error(JSON.stringify(error));
   }
 };
@@ -65,7 +65,7 @@ export const fetchScores = async session => {
     .select('user_id,score,revealed')
     .eq('session_name', session);
 
-  if (error && !Array.isArray(error)) {
+  if (error) {
     throw new Error(JSON.stringify(error));
   }
 

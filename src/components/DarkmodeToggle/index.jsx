@@ -5,11 +5,11 @@ export const DarkmodeToggle = () => {
   const [prefersDarkmode, setPrefersDarkmode] = React.useState(true);
   React.useEffect(() => {
     let shouldUseDarkmode = JSON.parse(
-      window.localStorage.getItem('prefers-dark-mode')
+      window.localStorage.getItem('prefers-dark-mode'),
     );
     if (shouldUseDarkmode === null) {
       shouldUseDarkmode = window.matchMedia(
-        '(prefers-color-scheme: dark)'
+        '(prefers-color-scheme: dark)',
       ).matches;
     }
     setPrefersDarkmode(shouldUseDarkmode);
@@ -29,7 +29,7 @@ export const DarkmodeToggle = () => {
     setPrefersDarkmode(!prefersDarkmode);
     window.localStorage.setItem(
       'prefers-dark-mode',
-      JSON.stringify(!prefersDarkmode)
+      JSON.stringify(!prefersDarkmode),
     );
   };
 

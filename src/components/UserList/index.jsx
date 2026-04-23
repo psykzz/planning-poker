@@ -7,7 +7,7 @@ const standardDeviation = array => {
   if (!n) return NaN;
   const mean = array.reduce((a, b) => a + b) / n;
   return Math.sqrt(
-    array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n
+    array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n,
   );
 };
 
@@ -19,30 +19,30 @@ export const UserList = ({ me, users, scores }) => {
   let lowest = React.useMemo(
     () =>
       Math.min(
-        ...scores.filter(score => score.score >= 0).map(score => score.score)
+        ...scores.filter(score => score.score >= 0).map(score => score.score),
       ),
-    [scores]
+    [scores],
   );
   let highest = React.useMemo(
     () =>
       Math.max(
-        ...scores.filter(score => score.score >= 0).map(score => score.score)
+        ...scores.filter(score => score.score >= 0).map(score => score.score),
       ),
-    [scores]
+    [scores],
   );
   let stddev = React.useMemo(
     () =>
       standardDeviation(
-        scores.filter(score => score.score >= 0).map(score => score.score)
+        scores.filter(score => score.score >= 0).map(score => score.score),
       ),
-    [scores]
+    [scores],
   );
   let avg = React.useMemo(
     () =>
       average(
-        scores.filter(score => score.score >= 0).map(score => score.score)
+        scores.filter(score => score.score >= 0).map(score => score.score),
       ),
-    [scores]
+    [scores],
   );
   const scoreByUser = {};
   scores?.forEach(score => {
@@ -72,7 +72,7 @@ export const UserList = ({ me, users, scores }) => {
       // Try to sort by score as well.
       users?.sort(
         (a, b) =>
-          (scoreByUser[b.id]?.score ?? 0) - (scoreByUser[a.id]?.score ?? 0)
+          (scoreByUser[b.id]?.score ?? 0) - (scoreByUser[a.id]?.score ?? 0),
       );
     }
   } catch (e) {
@@ -105,8 +105,12 @@ export const UserList = ({ me, users, scores }) => {
   const User = ({ user }) => {
     const isMe = user.id === me?.id;
     const score = scoreByUser[user.id];
+    const hasSubmittedScore = !!score;
     return (
-      <div key={user.id} className={`${styles.user} ${isMe && styles.self}`}>
+      <div
+        key={user.id}
+        className={`${styles.user} ${isMe && styles.self} ${hasSubmittedScore && styles.has_score}`}
+      >
         <div
           className={`${styles.name} ${isMe && styles.me}`}
           onClick={() =>

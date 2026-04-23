@@ -6,67 +6,89 @@
   Planning Poker
 </h1>
 
-A planning poker is built with Gatsby and React.
+A planning poker application built with Next.js and React.
 
 _Have an idea you want to suggest? Pull requests are welcome._
 
-## 🚀 Quick start
+## Quick start
 
-1.  **Start developing.**
+1. Clone the repo and install dependencies.
 
-    Clone the repo, and start developing.
+```shell
+git clone <url> .
+npm install
+```
 
-    ```shell
-    git clone <url> .
-    npx gatsby develop
-    ```
+2. Start the development server.
 
-1.  **Open the source code and start editing!**
+```shell
+npm run dev
+```
 
-    Your site is now running at `http://localhost:8000`!
+3. Open `http://localhost:3000/`.
 
-    _Note: You'll also see a second link: _`http://localhost:8000/___graphql`_. This is a tool you can use to experiment with querying your data. Learn more about using this tool in the [Gatsby tutorial](https://www.gatsbyjs.com/tutorial/part-five/#introducing-graphiql)._
+## Build and deploy
 
-    Any changes you make will be updated in real time!
+Build the app:
 
-## 🧐 What's inside?
+```shell
+npm run build
+```
 
-A quick look at the top-level files and directories you'll see in a Gatsby project.
+Start the production server:
 
-    .
-    ├── node_modules
-    ├── src
-    ├── .gitignore
-    ├── .prettierrc
-    ├── gatsby-browser.js
-    ├── gatsby-config.js
-    ├── gatsby-node.js
-    ├── gatsby-ssr.js
-    ├── LICENSE
-    ├── package-lock.json
-    ├── package.json
-    └── README.md
+```shell
+npm run start
+```
 
-1.  **`/node_modules`**: This directory contains all of the modules of code that your project depends on (npm packages) are automatically installed.
+### Netlify deployment
 
-2.  **`/src`**: This directory will contain all of the code related to what you will see on the front-end of your site (what you see in the browser) such as your site header or a page template. `src` is a convention for “source code”.
+The repo includes a `netlify.toml` that configures Netlify to build with Next.js using the Essential Next.js plugin:
 
-3.  **`.gitignore`**: This file tells git which files it should not track / not maintain a version history for.
+```toml
+[build]
+  command = "npm run build"
+  publish = ".next"
 
-4.  **`.prettierrc`**: This is a configuration file for [Prettier](https://prettier.io/). Prettier is a tool to help keep the formatting of your code consistent.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+```
 
-5.  **`gatsby-browser.js`**: This file is where Gatsby expects to find any usage of the [Gatsby browser APIs](https://www.gatsbyjs.com/docs/reference/config-files/gatsby-browser/) (if any). These allow customization/extension of default Gatsby settings affecting the browser.
+Netlify will automatically install `@netlify/plugin-nextjs` at build time. If you need to deploy under a subpath such as `/planning-poker`, set `DEPLOY_TARGET=planning-poker` for the build.
 
-6.  **`gatsby-config.js`**: This is the main configuration file for a Gatsby site. This is where you can specify information about your site (metadata) like the site title and description, which Gatsby plugins you’d like to include, etc. (Check out the [config docs](https://www.gatsbyjs.com/docs/reference/config-files/gatsby-config/) for more detail).
+## Supabase schema
 
-7.  **`gatsby-node.js`**: This file is where Gatsby expects to find any usage of the [Gatsby Node APIs](https://www.gatsbyjs.com/docs/reference/config-files/gatsby-node/) (if any). These allow customization/extension of default Gatsby settings affecting pieces of the site build process.
+The app reads and writes directly to Supabase from the browser, and expects three public tables:
 
-8.  **`gatsby-ssr.js`**: This file is where Gatsby expects to find any usage of the [Gatsby server-side rendering APIs](https://www.gatsbyjs.com/docs/reference/config-files/gatsby-ssr/) (if any). These allow customization of default Gatsby settings affecting server-side rendering.
+- `users`: session members and their `last_presence`
+- `scores`: one score per user per session
+- `options`: per-session settings such as the point sequence
 
-9.  **`LICENSE`**: This Gatsby starter is licensed under the 0BSD license. This means that you can see this file as a placeholder and replace it with your own license.
+To recreate the schema, run [supabase/schema.sql](supabase/schema.sql) in the Supabase SQL editor. The script:
 
-10. **`package-lock.json`** (See `package.json` below, first). This is an automatically generated file based on the exact versions of your npm dependencies that were installed for your project. **(You won’t change this file directly).**
+- recreates the `users`, `scores`, and `options` tables
+- adds `created_at` and `updated_at` columns for debugging
+- creates the composite keys required by the app's `upsert()` calls
+- enables RLS with permissive anon/authenticated policies so the current client continues to work
+- adds `scores` and `options` to `supabase_realtime`
 
-11. **`package.json`**: A manifest file for Node.js projects, which includes things like metadata (the project’s name, author, etc). This manifest is how npm knows which packages to install for your project.
+## Project structure
 
-12. **`README.md`**: A text file containing useful reference information about your project.
+```text
+.
+├── pages
+├── src
+├── static
+├── supabase
+├── eslint.config.js
+├── next.config.mjs
+├── netlify.toml
+├── package-lock.json
+├── package.json
+└── README.md
+```
+
+- `pages`: Next.js pages and API routes
+- `src`: application components and client-side API helpers
+- `static`: static assets
+- `supabase`: SQL schema for the backing database

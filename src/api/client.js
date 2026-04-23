@@ -1,20 +1,30 @@
 import { createClient } from '@supabase/supabase-js';
 
 export const supabase = createClient(
-  'https://coinnqngrwlwlfhwtkih.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTYzNTI0Nzg1MCwiZXhwIjoxOTUwODIzODUwfQ.bsG7ieEq9-tpfwACvQ_T-5DTU-xWyX2fWb3JezQFqdg'
+  'https://ukdwxekmgjfvkhaoygms.supabase.co',
+  'sb_publishable_Mwx4xZP8VexXNBUvRqdo8w_saEtXkXm',
 );
 
 export const addSubscription = (session, dbTable, callback) => {
-  return supabase
-    .from(`${dbTable}:session_name=eq.${session}`)
-    .on('*', payload => {
-      console.log(`${dbTable} change received`, payload);
-      callback(payload);
-    })
+  const channel = supabase
+    .channel(`${dbTable}-${session}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: dbTable,
+        filter: `session_name=eq.${session}`,
+      },
+      payload => {
+        console.log(`${dbTable} change received`, payload);
+        callback(payload);
+      },
+    )
     .subscribe();
+  return channel;
 };
 
-export const removeSubscription = subscriptionId => {
-  supabase.removeSubscription(subscriptionId);
+export const removeSubscription = channel => {
+  supabase.removeChannel(channel);
 };
