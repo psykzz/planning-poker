@@ -37,6 +37,12 @@
   transform: translateX(3.45rem);
 }
 
+.is_dark.darkmode_toggle {
+  /* margin-right: auto;
+  margin-left: 0.4rem; */
+  justify-content: flex-start;
+}
+
 .toggle_text {
   font-size: 0.72rem;
   font-weight: 700;
