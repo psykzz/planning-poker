@@ -5,6 +5,7 @@ import {
   submitOption,
   OPT_CONFIRM_DEFAULT,
   OPT_CONFIRM_KEY,
+  OPT_MODERATORS_KEY,
   OPT_POINT_SEQ_DEFAULT,
   OPT_POINT_KEY,
   OPT_SESSION_NAME_KEY,
@@ -26,6 +27,14 @@ const POINT_SEQUENCES_SORTED = Object.keys(POINT_SEQUENCES).sort();
 function parseISOString(s) {
   const b = s.split(/\D+/);
   return new Date(Date.UTC(b[0], --b[1], b[2], b[3], b[4], b[5], b[6]));
+}
+
+function parseModeratorIds(value) {
+  const entries = (value || '')
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(Boolean);
+  return [...new Set(entries)];
 }
 
 export const useSessionState = ({ session, localUser }) => {
@@ -145,12 +154,33 @@ export const useSessionState = ({ session, localUser }) => {
       setStageState(currentStage);
 
       if (currentUserId) {
-        const modValue = await fetchOption(
+        const moderatorsValue = await fetchOption(
+          currentSession,
+          OPT_MODERATORS_KEY,
+          '',
+        );
+        const moderatorIds = parseModeratorIds(moderatorsValue);
+
+        if (moderatorIds.includes(currentUserId)) {
+          setIsModerator(true);
+          return;
+        }
+
+        const legacyModValue = await fetchOption(
           currentSession,
           moderatorKey(currentUserId),
           'false',
         );
-        setIsModerator(modValue === 'true');
+        const isLegacyModerator = legacyModValue === 'true';
+        setIsModerator(isLegacyModerator);
+
+        if (isLegacyModerator) {
+          submitOption(
+            currentSession,
+            OPT_MODERATORS_KEY,
+            [...new Set([...moderatorIds, currentUserId])].join(','),
+          );
+        }
       }
     },
     [],
@@ -187,9 +217,18 @@ export const useSessionState = ({ session, localUser }) => {
         case OPT_STAGE_KEY:
           setStageState(payload.new?.value || OPT_STAGE_DEFAULT);
           break;
+        case OPT_MODERATORS_KEY:
+          if (user?.id) {
+            const moderatorIds = parseModeratorIds(payload.new?.value);
+            setIsModerator(moderatorIds.includes(user.id));
+          }
+          break;
         default:
           if (key?.startsWith('moderator:')) {
-            // Only update our own moderator status
+            // Keep legacy option behavior for older sessions.
+            if (key === moderatorKey(user?.id)) {
+              setIsModerator(payload.new?.value === 'true');
+            }
           }
           break;
       }
@@ -247,10 +286,21 @@ export const useSessionState = ({ session, localUser }) => {
   }, [session, nextSequence]);
 
   const setModeratorStatus = React.useCallback(
-    value => {
+    async value => {
       if (!session || !user?.id) return;
       setIsModerator(value);
-      submitOption(session, moderatorKey(user.id), value.toString());
+
+      const moderatorsValue = await fetchOption(
+        session,
+        OPT_MODERATORS_KEY,
+        '',
+      );
+      const moderatorIds = parseModeratorIds(moderatorsValue);
+      const nextModeratorIds = value
+        ? [...new Set([...moderatorIds, user.id])]
+        : moderatorIds.filter(currentId => currentId !== user.id);
+
+      submitOption(session, OPT_MODERATORS_KEY, nextModeratorIds.join(','));
     },
     [session, user],
   );

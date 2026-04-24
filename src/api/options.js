@@ -7,6 +7,7 @@ export const OPT_POINT_SEQ_DEFAULT = 'standard';
 export const OPT_POINT_KEY = 'point_sequence';
 
 export const OPT_SESSION_NAME_KEY = 'session_display_name';
+export const OPT_MODERATORS_KEY = 'moderators';
 export const OPT_MODERATOR_PREFIX = 'moderator';
 export const OPT_STAGE_KEY = 'stage';
 export const OPT_STAGE_DEFAULT = 'voting';
