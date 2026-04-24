@@ -29,6 +29,8 @@
   font-size: 1.15rem;
   font-weight: 600;
   transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .card:hover:not(.no_hover) {

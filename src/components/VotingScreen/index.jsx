@@ -12,6 +12,7 @@ import * as styles from './votingscreen.module.css';
 export const VotingScreen = ({ session, user: localUser }) => {
   const router = useRouter();
   const [clipboardState, copyToClipboard] = useCopyToClipboard();
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const {
     user,
     users,
@@ -58,7 +59,17 @@ export const VotingScreen = ({ session, user: localUser }) => {
 
   return (
     <div className={styles.container}>
+      <button
+        className={styles.menu_btn}
+        onClick={() => setSidebarOpen(true)}
+        aria-label="Open session menu"
+        type="button"
+      >
+        ☰
+      </button>
       <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
         session={session}
         user={user}
         rounds={rounds}
@@ -100,19 +111,23 @@ export const VotingScreen = ({ session, user: localUser }) => {
           </button>
         </div>
 
-        <UserList me={user} users={users} scores={scores} />
-        <button
-          type="button"
-          className={styles.invite_line}
-          onClick={copySessionId}
-        >
-          invite new members +
-        </button>
-        <ScoreCards
-          session={session}
-          options={POINT_SEQUENCES[sequence]}
-          selectedScore={userScore?.score}
-        />
+        <div className={styles.scrollable_content}>
+          <UserList me={user} users={users} scores={scores} />
+          <button
+            type="button"
+            className={styles.invite_line}
+            onClick={copySessionId}
+          >
+            invite new members +
+          </button>
+          <div className={styles.sticky_cards}>
+            <ScoreCards
+              session={session}
+              options={POINT_SEQUENCES[sequence]}
+              selectedScore={userScore?.score}
+            />
+          </div>
+        </div>
       </section>
     </div>
   );

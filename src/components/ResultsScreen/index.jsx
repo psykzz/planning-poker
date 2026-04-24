@@ -9,6 +9,7 @@ import * as styles from './resultsscreen.module.css';
 
 export const ResultsScreen = ({ session, user: localUser }) => {
   const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const { user, users, scores, confirmEnabled, stage, isModerator, sessionDisplayName, sequence, toggleConfirm, setModeratorStatus, setSessionDisplayName, setUserName, setStage } =
     useSessionState({ session, localUser });
   const { rounds, selectedRound, isViewingHistory, selectRound } =
@@ -34,7 +35,17 @@ export const ResultsScreen = ({ session, user: localUser }) => {
 
   return (
     <div className={styles.container}>
+      <button
+        className={styles.menu_btn}
+        onClick={() => setSidebarOpen(true)}
+        aria-label="Open session menu"
+        type="button"
+      >
+        ☰
+      </button>
       <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
         session={session}
         user={user}
         rounds={rounds}
@@ -74,7 +85,9 @@ export const ResultsScreen = ({ session, user: localUser }) => {
         </button>
       </div>
 
-      <UserList me={user} users={users} scores={scores} forceReveal />
+      <div className={styles.scrollable_content}>
+        <UserList me={user} users={users} scores={scores} forceReveal />
+      </div>
 
       </section>
     </div>

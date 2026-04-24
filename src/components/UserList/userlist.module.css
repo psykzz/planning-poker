@@ -38,23 +38,42 @@
   }
 
   .averages {
-    display: none;
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    font-size: 1rem;
+  }
+
+  .averages h3 {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+  }
+
+  .averages div {
+    padding: 0.6rem 0;
   }
 }
 
 .averages {
   width: 100%;
-  max-width: 320px;
-  margin: 0 auto;
-  padding: 0.9rem 1rem;
+  margin: 1rem 0 0 0;
+  padding: 1.2rem 1.4rem;
   border-radius: 14px;
   border: 1px solid var(--border-color);
   background: var(--surface-accent);
-  color: var(--text-color-subtle);
+  color: var(--text-color);
+  font-size: 0.95rem;
 }
 
 .averages h3 {
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.averages div {
+  padding: 0.4rem 0;
+  line-height: 1.4;
 }
 
 .user {

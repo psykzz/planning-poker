@@ -40,6 +40,11 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+  min-height: 100%;
+}
+
 body {
   font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
   color: var(--text-color);
@@ -47,7 +52,32 @@ body {
     radial-gradient(circle at 10% -15%, rgba(44, 95, 219, 0.18), transparent 38%),
     radial-gradient(circle at 90% 0%, rgba(217, 159, 34, 0.12), transparent 42%),
     linear-gradient(165deg, var(--bg-color) 0%, var(--bg-color-2) 100%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%, 100% 100%, 100% 100%;
   min-height: 100vh;
+  min-height: 100svh;
+}
+
+@supports (-moz-appearance: none) {
+  body {
+    background: linear-gradient(165deg, var(--bg-color) 0%, var(--bg-color-2) 100%);
+    position: relative;
+    isolation: isolate;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      radial-gradient(circle at 10% -15%, rgba(44, 95, 219, 0.18), transparent 38%),
+      radial-gradient(circle at 90% 0%, rgba(217, 159, 34, 0.12), transparent 42%),
+      linear-gradient(165deg, var(--bg-color) 0%, var(--bg-color-2) 100%);
+    background-repeat: no-repeat;
+    background-size: cover, cover, cover;
+  }
 }
 
 button,
@@ -58,8 +88,15 @@ input {
 button {
   border: none;
   background: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+input {
+  -webkit-tap-highlight-color: transparent;
 }
 
 a {
   color: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
