@@ -10,8 +10,16 @@ import * as styles from './votingscreen.module.css';
 export const VotingScreen = ({ session, user: localUser }) => {
   const router = useRouter();
   const [clipboardState, copyToClipboard] = useCopyToClipboard();
-  const { user, users, scores, sequence, stage, isModerator, sessionDisplayName, setStage } =
-    useSessionState({ session, localUser });
+  const {
+    user,
+    users,
+    scores,
+    sequence,
+    stage,
+    isModerator,
+    sessionDisplayName,
+    setStage,
+  } = useSessionState({ session, localUser });
   const userScore = scores.find(score => score.user_id === user?.id);
 
   React.useEffect(() => {
@@ -41,7 +49,11 @@ export const VotingScreen = ({ session, user: localUser }) => {
   return (
     <section className={styles.screen}>
       <div className={styles.header}>
-        <h1>{sessionDisplayName ? `${sessionDisplayName} - Voting` : 'Voting Stage'}</h1>
+        <h1>
+          {sessionDisplayName
+            ? `${sessionDisplayName} - Voting`
+            : 'Voting Stage'}
+        </h1>
         <p>Pick a card, then reveal when everyone is ready.</p>
       </div>
 
