@@ -1,7 +1,7 @@
 .page_shell {
     min-height: 100vh;
     min-height: 100svh;
-    padding: 2rem 1rem 0.75rem;
+    padding: 1rem 0.75rem 0.25rem;
 }
 
 .container {
@@ -14,6 +14,8 @@
 
 .main {
     width: 100%;
+    min-height: calc(100vh - 3.5rem);
+    min-height: calc(100svh - 3.5rem);
     background: var(--surface-color);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
@@ -23,10 +25,12 @@
 
 @media (max-width: 768px) {
     .page_shell {
-        padding: 1rem 0.5rem 0.75rem;
+        padding: 0.5rem 0.25rem 0.25rem;
     }
 
     .main {
+        min-height: calc(100vh - 2.5rem);
+        min-height: calc(100svh - 2.5rem);
         border-radius: var(--radius-md);
     }
 }
