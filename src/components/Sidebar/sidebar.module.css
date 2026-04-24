@@ -2,8 +2,6 @@
   position: relative;
   top: auto;
   left: auto;
-  min-height: 100vh;
-  min-height: 100%;
   width: 380px;
   flex: 0 0 380px;
   background-color: transparent;
@@ -17,7 +15,6 @@
   flex-direction: column;
   overflow: hidden;
   margin: 20px 0 20px 20px;
-  height: calc(100vh - 40px);
 }
 
 .overlay {
@@ -40,7 +37,7 @@
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-radius: var(--radius-lg) 0 0 0;;
   background-color: var(--surface-accent);
 }
 
@@ -52,6 +49,8 @@
 }
 
 .close_btn {
+  display: none;
+
   background: none;
   border: none;
   font-size: 20px;
@@ -60,7 +59,6 @@
   padding: 0;
   width: 32px;
   height: 32px;
-  display: flex;
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s;
@@ -267,6 +265,7 @@
   }
 
   .close_btn {
+    display: flex;
     width: 44px;
     height: 44px;
     font-size: 24px;

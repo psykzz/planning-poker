@@ -27,15 +27,10 @@
 }
 
 .sticky_cards {
-  position: sticky;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  margin-top: 1rem;
   padding: 12px 0 16px 0;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
-  background: var(--surface-accent);
   border-top: 1px solid var(--border-color);
-  z-index: 10;
 }
 
 .header h1 {
