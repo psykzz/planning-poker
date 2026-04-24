@@ -60,12 +60,12 @@ export const useSessionState = ({ session, localUser }) => {
   const updateUsers = React.useCallback(async currentSession => {
     if (!currentSession) return;
     const allUsers = await fetchAllUsers(currentSession);
-    const now = new Date();
     const afkSeconds = 30; // 3 * the presence timer
+    const cutoffTimestamp = Date.now() - afkSeconds * 1000;
     const activeUsers = allUsers.filter(
       currentUser =>
-        parseISOString(currentUser.last_presence) >
-        now.setSeconds(now.getSeconds() - afkSeconds),
+        parseISOString(currentUser.last_presence).getTime() >
+        cutoffTimestamp,
     );
     setUsers(activeUsers);
   }, []);
