@@ -2,6 +2,12 @@ import React from 'react';
 import { nanoid } from 'nanoid';
 import { PlanningPoker } from '../PlanningPoker';
 import * as styles from './hero.module.css';
+import {
+  clearStoredUser,
+  getStoredUser,
+  normalizeStoredUser,
+  setStoredUser,
+} from '../../utils/userStorage';
 
 export const Hero = () => {
   const [session, setSession] = React.useState('');
@@ -9,20 +15,12 @@ export const Hero = () => {
   const [nameInput, setNameInput] = React.useState('');
   const hasUser = Boolean(user?.id && user?.name);
 
-  const normalizeUser = React.useCallback(storedUser => {
-    if (!storedUser?.name) return;
-    return {
-      id: storedUser.id || globalThis.crypto.randomUUID(),
-      name: storedUser.name,
-    };
-  }, []);
-
   const onHashChange = React.useCallback(() => {
     setSession(window.location.hash.slice(1));
   }, []);
 
   const createOrRestoreUser = React.useCallback(() => {
-    const storedUser = normalizeUser(JSON.parse(localStorage.getItem('user')));
+    const storedUser = getStoredUser();
     if (storedUser) {
       setUser(storedUser);
       setNameInput(storedUser.name);
@@ -30,7 +28,7 @@ export const Hero = () => {
     }
 
     setUser(undefined);
-  }, [normalizeUser]);
+  }, []);
 
   React.useEffect(() => {
     window.addEventListener('hashchange', onHashChange);
@@ -45,7 +43,7 @@ export const Hero = () => {
       return;
     }
 
-    localStorage.setItem('user', JSON.stringify(user));
+    setStoredUser(user);
   }, [user]);
 
   const ensureUser = React.useCallback(() => {
@@ -58,10 +56,10 @@ export const Hero = () => {
       return null;
     }
 
-    const nextUser = normalizeUser({ name: normalizedName });
+    const nextUser = normalizeStoredUser({ name: normalizedName });
     setUser(nextUser);
     return nextUser;
-  }, [nameInput, normalizeUser, user]);
+  }, [nameInput, user]);
 
   const createSession = React.useCallback(() => {
     if (typeof window === 'undefined') {
@@ -87,7 +85,7 @@ export const Hero = () => {
   );
 
   const clearIdentity = React.useCallback(() => {
-    localStorage.removeItem('user');
+    clearStoredUser();
     setUser(undefined);
     setNameInput('');
   }, []);

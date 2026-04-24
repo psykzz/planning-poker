@@ -3,11 +3,7 @@ import { SCORE_ICON_MAP } from '../../api/scores';
 import * as styles from './rounddetail.module.css';
 
 export const RoundDetail = ({ round }) => {
-  if (!round || !round.scores) {
-    return <div className={styles.empty}>No scores in this round</div>;
-  }
-
-  const scores = round.scores || [];
+  const scores = React.useMemo(() => round?.scores || [], [round]);
 
   const numericScores = React.useMemo(
     () => scores.filter(score => score.score >= 0).map(score => score.score),
@@ -25,9 +21,30 @@ export const RoundDetail = ({ round }) => {
   );
 
   const sortedScores = React.useMemo(
-    () => [...scores].sort((a, b) => (b.score >= 0 ? 1 : -1)),
+    () =>
+      [...scores].sort((a, b) => {
+        const aScore = Number(a.score);
+        const bScore = Number(b.score);
+        const aIsNumeric = Number.isFinite(aScore) && aScore >= 0;
+        const bIsNumeric = Number.isFinite(bScore) && bScore >= 0;
+
+        if (aIsNumeric && bIsNumeric) {
+          return bScore - aScore;
+        }
+        if (aIsNumeric) {
+          return -1;
+        }
+        if (bIsNumeric) {
+          return 1;
+        }
+        return String(a.score).localeCompare(String(b.score));
+      }),
     [scores],
   );
+
+  if (!scores.length) {
+    return <div className={styles.empty}>No scores in this round</div>;
+  }
 
   return (
     <div className={styles.round_detail}>

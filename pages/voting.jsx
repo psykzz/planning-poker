@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import Layout from '../src/components/Layout';
 import { VotingScreen } from '../src/components/VotingScreen';
 import * as styles from '../src/components/JoinSessionPrompt/joinsessionprompt.module.css';
+import { getStoredUser, setStoredUser } from '../src/utils/userStorage';
 
 const Voting = () => {
   const router = useRouter();
@@ -15,7 +16,7 @@ const Voting = () => {
 
   React.useEffect(() => {
     const hashSession = window.location.hash.slice(1);
-    const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+    const storedUser = getStoredUser();
     const hasUser = Boolean(storedUser?.id && storedUser?.name);
 
     if (!hashSession) {
@@ -48,7 +49,7 @@ const Voting = () => {
         id: globalThis.crypto.randomUUID(),
         name: normalizedName,
       };
-      localStorage.setItem('user', JSON.stringify(nextUser));
+      setStoredUser(nextUser);
       setUser(nextUser);
       setReady(true);
     },

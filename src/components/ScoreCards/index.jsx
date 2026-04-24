@@ -1,21 +1,28 @@
 import React from 'react';
+import { toast } from 'react-toastify';
 import { submitScore, deleteScore, ICON_SCORE_MAP } from '../../api/scores';
+import { getStoredUser } from '../../utils/userStorage';
 
 import * as styles from './scorecards.module.css';
 
 export const ScoreCards = ({ options, session, selectedScore }) => {
   const onSelectCard = React.useCallback(
-    value => {
-      const user = JSON.parse(localStorage.getItem('user'));
+    async value => {
+      const user = getStoredUser();
       if (!user?.id) return;
 
       const deleteValue = '-';
       const scoreValue = ICON_SCORE_MAP[value] || value;
 
-      if (value === deleteValue) {
-        deleteScore(session, user.id);
-      } else {
-        submitScore(session, user.id, scoreValue);
+      try {
+        if (value === deleteValue) {
+          await deleteScore(session, user.id);
+        } else {
+          await submitScore(session, user.id, scoreValue);
+        }
+      } catch (error) {
+        toast.error('Could not submit score. Please try again.');
+        console.warn('Failed to submit score', error);
       }
     },
     [session],

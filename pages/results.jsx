@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '../src/components/Layout';
 import { ResultsScreen } from '../src/components/ResultsScreen';
+import { getStoredUser } from '../src/utils/userStorage';
 
 const Results = () => {
   const router = useRouter();
@@ -12,7 +13,7 @@ const Results = () => {
 
   React.useEffect(() => {
     const hashSession = window.location.hash.slice(1);
-    const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+    const storedUser = getStoredUser();
     const hasUser = Boolean(storedUser?.id && storedUser?.name);
 
     if (!hashSession) {
