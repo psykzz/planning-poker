@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { useRouter } from 'next/router';
 import Layout from '../src/components/Layout';
 import { VotingScreen } from '../src/components/VotingScreen';
+import * as styles from '../src/components/JoinSessionPrompt/joinsessionprompt.module.css';
 
 const Voting = () => {
   const router = useRouter();
@@ -63,31 +64,28 @@ const Voting = () => {
         {ready ? (
           <VotingScreen session={session} user={user} />
         ) : (
-          <section
-            style={{
-              maxWidth: 520,
-              margin: '0 auto',
-              display: 'grid',
-              gap: 12,
-              textAlign: 'center',
-            }}
-          >
-            <h1>Join Voting Session</h1>
-            <p>
+          <section className={styles.panel}>
+            <h1 className={styles.title}>Join Voting Session</h1>
+            <p className={styles.subtitle}>
               Enter your display name to join session <strong>{session}</strong>
               .
             </p>
-            <form onSubmit={submitName} style={{ display: 'grid', gap: 10 }}>
-              <label htmlFor="player-name">Display name</label>
+            <form onSubmit={submitName} className={styles.form}>
+              <label htmlFor="player-name" className={styles.label}>
+                Display name
+              </label>
               <input
                 id="player-name"
+                className={styles.name_input}
                 value={nameInput}
                 onChange={event => setNameInput(event.target.value)}
                 placeholder="Enter your name"
                 autoComplete="name"
                 required
               />
-              <button type="submit">Join session</button>
+              <button type="submit" className={styles.submit_button}>
+                Join session
+              </button>
             </form>
           </section>
         )}
