@@ -33,6 +33,30 @@
   background: var(--surface-accent);
 }
 
+.divider {
+  position: relative;
+  text-align: center;
+  color: var(--text-color-subtle);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid var(--border-color);
+}
+
+.divider span {
+  position: relative;
+  background: var(--bg-color);
+  padding: 0 10px;
+}
+
 .label {
   display: block;
   font-weight: 700;

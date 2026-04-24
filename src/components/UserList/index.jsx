@@ -56,14 +56,6 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
     return ordered;
   }, [users, showScores, scoreByUser]);
 
-  const resetName = () => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    localStorage.removeItem('user');
-    window.location.reload();
-  };
-
   const Score = ({ isMe, score }) => {
     if (!score) {
       return <div className={styles.score}>-</div>;
@@ -87,17 +79,10 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
         key={user.id}
         className={`${styles.user} ${isMe && styles.self} ${hasSubmittedScore && styles.has_score}`}
       >
-        {isMe ? (
-          <button
-            type="button"
-            className={`${styles.name} ${styles.me} ${styles.name_button}`}
-            onClick={() => window.confirm('Reset your name?') && resetName()}
-          >
-            {user.name} (You)
-          </button>
-        ) : (
-          <div className={styles.name}>{user.name}</div>
-        )}
+        <div className={`${styles.name} ${isMe ? styles.me : ''}`}>
+          {user.name}
+          {isMe ? ' (You)' : ''}
+        </div>
         <div className={`${styles.card} ${styles.no_hover}`}>
           <Score {...{ isMe, score }} />
         </div>

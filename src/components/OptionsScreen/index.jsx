@@ -16,20 +16,34 @@ export const OptionsScreen = ({ session, user: localUser }) => {
     toggleConfirm,
     setModeratorStatus,
     setSessionDisplayName,
+    setUserName,
   } = useSessionState({ session, localUser });
 
-  const [nameInput, setNameInput] = React.useState('');
+  const [userNameInput, setUserNameInput] = React.useState('');
+  const [sessionNameInput, setSessionNameInput] = React.useState('');
 
   React.useEffect(() => {
-    setNameInput(sessionDisplayName);
+    setSessionNameInput(sessionDisplayName);
   }, [sessionDisplayName]);
 
-  const handleNameSave = React.useCallback(
+  React.useEffect(() => {
+    setUserNameInput(user?.name || '');
+  }, [user?.name]);
+
+  const handleUserNameSave = React.useCallback(
     e => {
       e.preventDefault();
-      setSessionDisplayName(nameInput.trim());
+      setUserName(userNameInput);
     },
-    [nameInput, setSessionDisplayName],
+    [setUserName, userNameInput],
+  );
+
+  const handleSessionNameSave = React.useCallback(
+    e => {
+      e.preventDefault();
+      setSessionDisplayName(sessionNameInput.trim());
+    },
+    [sessionNameInput, setSessionDisplayName],
   );
 
   const handleSequenceChange = React.useCallback(
@@ -47,20 +61,45 @@ export const OptionsScreen = ({ session, user: localUser }) => {
       </div>
 
       <div className={styles.settings}>
+        {/* User display name */}
+        <div className={styles.setting}>
+          <label className={styles.label} htmlFor="display-name">
+            Your display name
+          </label>
+          <form className={styles.inline_form} onSubmit={handleUserNameSave}>
+            <input
+              id="display-name"
+              className={styles.text_input}
+              type="text"
+              value={userNameInput}
+              maxLength={80}
+              placeholder="e.g. QA Tester"
+              onChange={e => setUserNameInput(e.target.value)}
+            />
+            <button type="submit" className={styles.save_btn}>
+              Save
+            </button>
+          </form>
+        </div>
+
+        <div className={styles.divider}>
+          <span>Session options</span>
+        </div>
+
         {/* Session display name */}
         <div className={styles.setting}>
           <label className={styles.label} htmlFor="session-name">
             Session name
           </label>
-          <form className={styles.inline_form} onSubmit={handleNameSave}>
+          <form className={styles.inline_form} onSubmit={handleSessionNameSave}>
             <input
               id="session-name"
               className={styles.text_input}
               type="text"
-              value={nameInput}
+              value={sessionNameInput}
               maxLength={80}
               placeholder="e.g. Sprint 42"
-              onChange={e => setNameInput(e.target.value)}
+              onChange={e => setSessionNameInput(e.target.value)}
             />
             <button type="submit" className={styles.save_btn}>
               Save

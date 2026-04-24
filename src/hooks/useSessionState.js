@@ -252,7 +252,7 @@ export const useSessionState = ({ session, localUser }) => {
       setIsModerator(value);
       submitOption(session, moderatorKey(user.id), value.toString());
     },
-    [session, user?.id],
+    [session, user],
   );
 
   const setSessionDisplayName = React.useCallback(
@@ -262,6 +262,24 @@ export const useSessionState = ({ session, localUser }) => {
       submitOption(session, OPT_SESSION_NAME_KEY, name);
     },
     [session],
+  );
+
+  const setUserName = React.useCallback(
+    async name => {
+      const normalizedName = name?.trim();
+      if (!session || !user?.id || !normalizedName) return;
+      const updatedUser = await createUser(session, {
+        ...user,
+        name: normalizedName,
+      });
+      setUser(updatedUser);
+      setUsers(currentUsers =>
+        currentUsers.map(currentUser =>
+          currentUser.id === updatedUser.id ? updatedUser : currentUser,
+        ),
+      );
+    },
+    [session, user],
   );
 
   const setStage = React.useCallback(
@@ -291,5 +309,6 @@ export const useSessionState = ({ session, localUser }) => {
     setModeratorStatus,
     setSessionDisplayName,
     setStage,
+    setUserName,
   };
 };

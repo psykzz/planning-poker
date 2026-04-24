@@ -75,19 +75,11 @@
   text-align: left;
 }
 
-.me {
-  cursor: pointer;
-}
-
 .name_button {
   border: none;
   background: transparent;
   color: inherit;
   padding: 0;
-}
-
-.me:hover {
-  color: var(--color-discord-blue);
 }
 
 .card {
