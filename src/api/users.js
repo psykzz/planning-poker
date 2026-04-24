@@ -18,10 +18,7 @@ export const createUser = async (session, user) => {
 
   const { data: newUser, error } = await supabase
     .from('users')
-    .upsert(
-      [payload],
-      { onConflict: 'id' },
-    )
+    .upsert([payload], { onConflict: 'id' })
     .select()
     .single();
 

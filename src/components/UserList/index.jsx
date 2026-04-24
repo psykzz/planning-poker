@@ -40,14 +40,14 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
   const sortedUsers = React.useMemo(() => {
     const ordered = [...(users || [])].sort((a, b) => a.id.localeCompare(b.id));
     if (showScores) {
-      return ordered.sort(
-        (a, b) => {
-          if (a.is_spectator !== b.is_spectator) {
-            return a.is_spectator ? 1 : -1;
-          }
-          return (scoreByUser[b.id]?.score ?? 0) - (scoreByUser[a.id]?.score ?? 0);
-        },
-      );
+      return ordered.sort((a, b) => {
+        if (a.is_spectator !== b.is_spectator) {
+          return a.is_spectator ? 1 : -1;
+        }
+        return (
+          (scoreByUser[b.id]?.score ?? 0) - (scoreByUser[a.id]?.score ?? 0)
+        );
+      });
     }
     return ordered;
   }, [users, showScores, scoreByUser]);
