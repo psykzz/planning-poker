@@ -145,14 +145,19 @@ export const useSessionState = ({ session, localUser }) => {
     async (currentSession, currentUserId) => {
       if (!currentSession) return;
       const requestId = ++optionsRequestRef.current;
-      const [pointSequence, confirm, displayName, currentStage, moderatorsValue] =
-        await Promise.all([
-          fetchOption(currentSession, OPT_POINT_KEY, OPT_POINT_SEQ_DEFAULT),
-          fetchOption(currentSession, OPT_CONFIRM_KEY, OPT_CONFIRM_DEFAULT),
-          fetchOption(currentSession, OPT_SESSION_NAME_KEY, ''),
-          fetchOption(currentSession, OPT_STAGE_KEY, OPT_STAGE_DEFAULT),
-          fetchOption(currentSession, OPT_MODERATORS_KEY, ''),
-        ]);
+      const [
+        pointSequence,
+        confirm,
+        displayName,
+        currentStage,
+        moderatorsValue,
+      ] = await Promise.all([
+        fetchOption(currentSession, OPT_POINT_KEY, OPT_POINT_SEQ_DEFAULT),
+        fetchOption(currentSession, OPT_CONFIRM_KEY, OPT_CONFIRM_DEFAULT),
+        fetchOption(currentSession, OPT_SESSION_NAME_KEY, ''),
+        fetchOption(currentSession, OPT_STAGE_KEY, OPT_STAGE_DEFAULT),
+        fetchOption(currentSession, OPT_MODERATORS_KEY, ''),
+      ]);
 
       if (
         sessionRef.current !== currentSession ||
