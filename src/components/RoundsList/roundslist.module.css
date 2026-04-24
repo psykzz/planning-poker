@@ -1,0 +1,120 @@
+.rounds_list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.date_group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.date_header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background-color: var(--surface-color);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-color);
+  transition: background-color 0.2s;
+}
+
+.date_header:hover {
+  background-color: rgba(44, 95, 219, 0.1);
+}
+
+.date_text {
+  flex: 1;
+  text-align: left;
+  font-size: 14px;
+}
+
+.count {
+  font-size: 12px;
+  color: var(--text-color);
+  opacity: 0.6;
+  background-color: rgba(44, 95, 219, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.chevron {
+  font-size: 12px;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+
+.rounds_in_group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 4px;
+}
+
+.round_item {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background-color: var(--surface-color);
+}
+
+.round_item.selected {
+  border-color: var(--color-discord-blue);
+  background-color: rgba(44, 95, 219, 0.05);
+}
+
+.round_button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-color);
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.round_button:hover {
+  background-color: rgba(44, 95, 219, 0.1);
+}
+
+.time {
+  font-weight: 600;
+  color: var(--color-discord-blue);
+}
+
+.participants {
+  font-size: 12px;
+  color: var(--text-color);
+  opacity: 0.6;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--border-color);
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-color);
+  opacity: 0.6;
+  font-size: 14px;
+}

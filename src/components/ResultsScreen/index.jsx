@@ -1,14 +1,18 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { UserList } from '../UserList';
+import { Sidebar } from '../Sidebar';
 import { useSessionState } from '../../hooks/useSessionState';
-import { resetScores } from '../../api/scores';
+import { useRounds } from '../../hooks/useRounds';
+import { resetScoresWithRound } from '../../api/rounds';
 import * as styles from './resultsscreen.module.css';
 
 export const ResultsScreen = ({ session, user: localUser }) => {
   const router = useRouter();
-  const { user, users, scores, confirmEnabled, stage, isModerator, sessionDisplayName, setStage } =
+  const { user, users, scores, confirmEnabled, stage, isModerator, sessionDisplayName, sequence, toggleConfirm, setModeratorStatus, setSessionDisplayName, setUserName, setStage } =
     useSessionState({ session, localUser });
+  const { rounds, selectedRound, isViewingHistory, selectRound } =
+    useRounds({ session });
 
   React.useEffect(() => {
     if (stage !== 'voting') {
@@ -23,14 +27,31 @@ export const ResultsScreen = ({ session, user: localUser }) => {
       isModerator &&
       (!confirmEnabled || window.confirm('Reset scores and go back to voting?'))
     ) {
-      resetScores(session);
+      resetScoresWithRound(session, scores, users);
       setStage('voting');
     }
-  }, [session, isModerator, confirmEnabled, setStage]);
+  }, [session, scores, users, isModerator, confirmEnabled, setStage]);
 
   return (
-    <section className={styles.screen}>
-      <div className={styles.header}>
+    <div className={styles.container}>
+      <Sidebar
+        session={session}
+        user={user}
+        rounds={rounds}
+        selectedRound={selectedRound}
+        isViewingHistory={isViewingHistory}
+        onSelectRound={selectRound}
+        sequence={sequence}
+        confirmEnabled={confirmEnabled}
+        isModerator={isModerator}
+        sessionDisplayName={sessionDisplayName}
+        toggleConfirm={toggleConfirm}
+        setModeratorStatus={setModeratorStatus}
+        setSessionDisplayName={setSessionDisplayName}
+        setUserName={setUserName}
+      />
+      <section className={styles.screen}>
+        <div className={styles.header}>
         <h1>{sessionDisplayName ? `${sessionDisplayName} - Results` : 'Results Stage'}</h1>
         <p>
           Everyone&apos;s submitted scores and summary stats are shown below.
@@ -45,7 +66,7 @@ export const ResultsScreen = ({ session, user: localUser }) => {
           disabled={!isModerator}
           title={
             !isModerator
-              ? 'Become a moderator in Options to control the session stage'
+              ? 'Become a moderator in Session to control the session stage'
               : ''
           }
         >
@@ -54,7 +75,9 @@ export const ResultsScreen = ({ session, user: localUser }) => {
       </div>
 
       <UserList me={user} users={users} scores={scores} forceReveal />
-    </section>
+
+      </section>
+    </div>
   );
 };
 
