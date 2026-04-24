@@ -1,5 +1,6 @@
 .page_shell {
     min-height: 100vh;
+    min-height: 100svh;
     padding: 2rem 1rem 0.75rem;
 }
 

@@ -1,7 +1,5 @@
 .darkmode_toggle {
-  position: fixed;
-  top: 14px;
-  right: 14px;
+  position: relative;
   height: 2rem;
   width: 5.5rem;
   background: var(--inverted-bg-color);
@@ -15,7 +13,6 @@
   align-items: center;
   justify-content: flex-end;
   overflow: hidden;
-  z-index: 20;
 }
 
 .darkmode_toggle::before {
@@ -52,8 +49,6 @@
 
 @media (max-width: 768px) {
   .darkmode_toggle {
-    top: 10px;
-    right: 10px;
     height: 1.8rem;
     width: 5rem;
   }

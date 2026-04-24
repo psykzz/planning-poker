@@ -2,7 +2,6 @@
   position: relative;
   top: auto;
   left: auto;
-  height: 100vh;
   width: 380px;
   flex: 0 0 380px;
   background-color: transparent;
@@ -16,18 +15,10 @@
   flex-direction: column;
   overflow: hidden;
   margin: 20px 0 20px 20px;
-  height: calc(100vh - 40px);
 }
 
 .overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 998;
-  animation: fadeIn 0.3s ease-in-out;
+  display: none; /* Hidden on desktop */
 }
 
 @keyframes fadeIn {
@@ -46,7 +37,7 @@
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-radius: var(--radius-lg) 0 0 0;;
   background-color: var(--surface-accent);
 }
 
@@ -58,6 +49,8 @@
 }
 
 .close_btn {
+  display: none;
+
   background: none;
   border: none;
   font-size: 20px;
@@ -66,7 +59,6 @@
   padding: 0;
   width: 32px;
   height: 32px;
-  display: flex;
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s;
@@ -231,7 +223,67 @@
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
+  .overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
   .sidebar {
-    max-width: 100%;
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: auto;
+    width: 100%;
+    max-width: 380px;
+    height: 100svh;
+    margin: 0;
+    border-radius: 0;
+    border-right: none;
+    border-left: 1px solid var(--border-color);
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out, visibility 0s 0.3s;
+    box-shadow: var(--shadow-strong);
+    background-color: var(--bg-color);
+    visibility: hidden;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.3s ease-in-out, visibility 0s 0s;
+  }
+
+  .header {
+    border-radius: 0;
+  }
+
+  .close_btn {
+    display: flex;
+    width: 44px;
+    height: 44px;
+    font-size: 24px;
+  }
+
+  .tab {
+    padding: 16px;
+    min-height: 48px;
+  }
+
+  .save_btn {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+
+  .text_input {
+    font-size: 16px; /* Prevent iOS zoom */
+    padding: 12px;
+    min-height: 44px;
   }
 }

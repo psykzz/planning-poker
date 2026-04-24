@@ -23,9 +23,11 @@ export const Sidebar = ({
   setSessionDisplayName,
   setUserName,
 }) => {
+  const storageKey = 'prefers-dark-mode';
   const [activeTab, setActiveTab] = React.useState('rounds');
   const [userNameInput, setUserNameInput] = React.useState('');
   const [sessionNameInput, setSessionNameInput] = React.useState('');
+  const [themeMode, setThemeMode] = React.useState('dark');
 
   React.useEffect(() => {
     setSessionNameInput(sessionDisplayName);
@@ -34,6 +36,29 @@ export const Sidebar = ({
   React.useEffect(() => {
     setUserNameInput(user?.name || '');
   }, [user?.name]);
+
+  React.useEffect(() => {
+    const storedValue = window.localStorage.getItem(storageKey);
+    let shouldUseDarkmode = null;
+    if (storedValue !== null) {
+      shouldUseDarkmode = JSON.parse(storedValue);
+    }
+    if (typeof shouldUseDarkmode !== 'boolean') {
+      shouldUseDarkmode = window.matchMedia(
+        '(prefers-color-scheme: dark)',
+      ).matches;
+    }
+    setThemeMode(shouldUseDarkmode ? 'dark' : 'light');
+  }, []);
+
+  React.useEffect(() => {
+    const prefersDarkmode = themeMode === 'dark';
+    document.documentElement.setAttribute(
+      'data-theme',
+      prefersDarkmode ? 'dark' : 'light',
+    );
+    window.localStorage.setItem(storageKey, JSON.stringify(prefersDarkmode));
+  }, [themeMode]);
 
   const handleUserNameSave = React.useCallback(
     e => {
@@ -59,152 +84,193 @@ export const Sidebar = ({
   );
 
   return (
-    <aside className={styles.sidebar}>
-      <div className={styles.header}>
-        <h2>Session</h2>
-        <button className={styles.close_btn} onClick={onClose}>
-          ✕
-        </button>
-      </div>
+    <>
+      {isOpen && (
+        <div className={styles.overlay} onClick={onClose} aria-hidden="true" />
+      )}
+      <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''}`}>
+        <div className={styles.header}>
+          <h2>Session</h2>
+          <button
+            className={styles.close_btn}
+            onClick={onClose}
+            aria-label="Close sidebar"
+          >
+            ✕
+          </button>
+        </div>
 
-      {/* Tabs */}
-      <div className={styles.tabs}>
-        <button
-          className={`${styles.tab} ${activeTab === 'rounds' ? styles.active : ''}`}
-          onClick={() => setActiveTab('rounds')}
-        >
-          Rounds
-        </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'options' ? styles.active : ''}`}
-          onClick={() => setActiveTab('options')}
-        >
-          Options
-        </button>
-      </div>
+        {/* Tabs */}
+        <div className={styles.tabs}>
+          <button
+            className={`${styles.tab} ${activeTab === 'rounds' ? styles.active : ''}`}
+            onClick={() => setActiveTab('rounds')}
+          >
+            Rounds
+          </button>
+          <button
+            className={`${styles.tab} ${activeTab === 'options' ? styles.active : ''}`}
+            onClick={() => setActiveTab('options')}
+          >
+            Options
+          </button>
+        </div>
 
-      {/* Tab Content */}
-      <div className={styles.content}>
-        {/* Rounds Tab */}
-        {activeTab === 'rounds' && (
-          <div className={styles.tab_content}>
-            <RoundsList
-              rounds={rounds}
-              selectedRound={selectedRound}
-              onSelectRound={onSelectRound}
-            />
-          </div>
-        )}
+        {/* Tab Content */}
+        <div className={styles.content}>
+          {/* Rounds Tab */}
+          {activeTab === 'rounds' && (
+            <div className={styles.tab_content}>
+              <RoundsList
+                rounds={rounds}
+                selectedRound={selectedRound}
+                onSelectRound={onSelectRound}
+              />
+            </div>
+          )}
 
-        {/* Options Tab */}
-        {activeTab === 'options' && (
-          <div className={styles.tab_content}>
-            <div className={styles.settings}>
-              {/* User display name */}
-              <div className={styles.setting}>
-                <label className={styles.label} htmlFor="display-name-sidebar">
-                  Your display name
-                </label>
-                <form
-                  className={styles.inline_form}
-                  onSubmit={handleUserNameSave}
-                >
-                  <input
-                    id="display-name-sidebar"
-                    className={styles.text_input}
-                    type="text"
-                    value={userNameInput}
-                    maxLength={80}
-                    placeholder="e.g. QA Tester"
-                    onChange={e => setUserNameInput(e.target.value)}
-                  />
-                  <button type="submit" className={styles.save_btn}>
-                    Save
-                  </button>
-                </form>
-              </div>
+          {/* Options Tab */}
+          {activeTab === 'options' && (
+            <div className={styles.tab_content}>
+              <div className={styles.settings}>
+                {/* User display name */}
+                <div className={styles.setting}>
+                  <label
+                    className={styles.label}
+                    htmlFor="display-name-sidebar"
+                  >
+                    Your display name
+                  </label>
+                  <form
+                    className={styles.inline_form}
+                    onSubmit={handleUserNameSave}
+                  >
+                    <input
+                      id="display-name-sidebar"
+                      className={styles.text_input}
+                      type="text"
+                      value={userNameInput}
+                      maxLength={80}
+                      placeholder="e.g. QA Tester"
+                      onChange={e => setUserNameInput(e.target.value)}
+                    />
+                    <button type="submit" className={styles.save_btn}>
+                      Save
+                    </button>
+                  </form>
+                </div>
 
-              <div className={styles.divider}>
-                <span>Session options</span>
-              </div>
-
-              {/* Session display name */}
-              <div className={styles.setting}>
-                <label className={styles.label} htmlFor="session-name-sidebar">
-                  Session name
-                </label>
-                <form
-                  className={styles.inline_form}
-                  onSubmit={handleSessionNameSave}
-                >
-                  <input
-                    id="session-name-sidebar"
-                    className={styles.text_input}
-                    type="text"
-                    value={sessionNameInput}
-                    maxLength={80}
-                    placeholder="e.g. Sprint 42"
-                    onChange={e => setSessionNameInput(e.target.value)}
-                  />
-                  <button type="submit" className={styles.save_btn}>
-                    Save
-                  </button>
-                </form>
-              </div>
-
-              {/* Card type */}
-              <div className={styles.setting}>
-                <span className={styles.label}>Card type</span>
-                <div className={styles.radio_group}>
-                  {Object.keys(POINT_SEQUENCES).map(seq => (
-                    <label key={seq} className={styles.radio_label}>
+                <div className={styles.setting}>
+                  <span className={styles.label}>Theme</span>
+                  <div className={styles.radio_group}>
+                    <label className={styles.radio_label}>
                       <input
                         type="radio"
-                        name="sequence"
-                        value={seq}
-                        checked={sequence === seq}
-                        onChange={handleSequenceChange}
+                        name="theme-sidebar"
+                        value="light"
+                        checked={themeMode === 'light'}
+                        onChange={e => setThemeMode(e.target.value)}
                       />
-                      <span className={styles.radio_text}>
-                        {seq.charAt(0).toUpperCase() + seq.slice(1)}
-                      </span>
+                      <span className={styles.radio_text}>Light</span>
                     </label>
-                  ))}
+                    <label className={styles.radio_label}>
+                      <input
+                        type="radio"
+                        name="theme-sidebar"
+                        value="dark"
+                        checked={themeMode === 'dark'}
+                        onChange={e => setThemeMode(e.target.value)}
+                      />
+                      <span className={styles.radio_text}>Dark</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className={styles.divider}>
+                  <span>Session options</span>
+                </div>
+
+                {/* Session display name */}
+                <div className={styles.setting}>
+                  <label
+                    className={styles.label}
+                    htmlFor="session-name-sidebar"
+                  >
+                    Session name
+                  </label>
+                  <form
+                    className={styles.inline_form}
+                    onSubmit={handleSessionNameSave}
+                  >
+                    <input
+                      id="session-name-sidebar"
+                      className={styles.text_input}
+                      type="text"
+                      value={sessionNameInput}
+                      maxLength={80}
+                      placeholder="e.g. Sprint 42"
+                      onChange={e => setSessionNameInput(e.target.value)}
+                    />
+                    <button type="submit" className={styles.save_btn}>
+                      Save
+                    </button>
+                  </form>
+                </div>
+
+                {/* Card type */}
+                <div className={styles.setting}>
+                  <span className={styles.label}>Card type</span>
+                  <div className={styles.radio_group}>
+                    {Object.keys(POINT_SEQUENCES).map(seq => (
+                      <label key={seq} className={styles.radio_label}>
+                        <input
+                          type="radio"
+                          name="sequence"
+                          value={seq}
+                          checked={sequence === seq}
+                          onChange={handleSequenceChange}
+                        />
+                        <span className={styles.radio_text}>
+                          {seq.charAt(0).toUpperCase() + seq.slice(1)}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Confirm dialogs */}
+                <div className={styles.setting}>
+                  <span className={styles.label}>Confirm dialogs</span>
+                  <label className={styles.toggle_label}>
+                    <input
+                      type="checkbox"
+                      checked={confirmEnabled}
+                      onChange={toggleConfirm}
+                    />
+                    <span>{confirmEnabled ? 'Enabled' : 'Disabled'}</span>
+                  </label>
+                </div>
+
+                {/* Moderator */}
+                <div className={styles.setting}>
+                  <span className={styles.label}>Moderator</span>
+                  <label className={styles.toggle_label}>
+                    <input
+                      type="checkbox"
+                      checked={isModerator}
+                      onChange={e => setModeratorStatus(e.target.checked)}
+                    />
+                    <span>
+                      {isModerator ? 'You are a moderator' : 'Not a moderator'}
+                    </span>
+                  </label>
                 </div>
               </div>
-
-              {/* Confirm dialogs */}
-              <div className={styles.setting}>
-                <span className={styles.label}>Confirm dialogs</span>
-                <label className={styles.toggle_label}>
-                  <input
-                    type="checkbox"
-                    checked={confirmEnabled}
-                    onChange={toggleConfirm}
-                  />
-                  <span>{confirmEnabled ? 'Enabled' : 'Disabled'}</span>
-                </label>
-              </div>
-
-              {/* Moderator */}
-              <div className={styles.setting}>
-                <span className={styles.label}>Moderator</span>
-                <label className={styles.toggle_label}>
-                  <input
-                    type="checkbox"
-                    checked={isModerator}
-                    onChange={e => setModeratorStatus(e.target.checked)}
-                  />
-                  <span>
-                    {isModerator ? 'You are a moderator' : 'Not a moderator'}
-                  </span>
-                </label>
-              </div>
             </div>
-          </div>
-        )}
-      </div>
-    </aside>
+          )}
+        </div>
+      </aside>
+    </>
   );
 };
 
