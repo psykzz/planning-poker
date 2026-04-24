@@ -7,7 +7,7 @@ import * as styles from './resultsscreen.module.css';
 
 export const ResultsScreen = ({ session, user: localUser }) => {
   const router = useRouter();
-  const { user, users, scores, confirmEnabled, stage, isModerator, setStage } =
+  const { user, users, scores, confirmEnabled, stage, isModerator, sessionDisplayName, setStage } =
     useSessionState({ session, localUser });
 
   React.useEffect(() => {
@@ -31,7 +31,7 @@ export const ResultsScreen = ({ session, user: localUser }) => {
   return (
     <section className={styles.screen}>
       <div className={styles.header}>
-        <h1>Results Stage</h1>
+        <h1>{sessionDisplayName ? `${sessionDisplayName} - Results` : 'Results Stage'}</h1>
         <p>
           Everyone&apos;s submitted scores and summary stats are shown below.
         </p>
