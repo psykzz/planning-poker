@@ -10,16 +10,16 @@ A planning poker application built with Next.js and React.
 
 _Have an idea you want to suggest? Pull requests are welcome._
 
-## Quick start
+## Quick Start
 
-1. Clone the repo and install dependencies.
+1. Clone and install dependencies.
 
 ```shell
 git clone <url> .
 npm install
 ```
 
-2. Start the development server.
+2. Start local development.
 
 ```shell
 npm run dev
@@ -27,23 +27,47 @@ npm run dev
 
 3. Open `http://localhost:3000/`.
 
-## Build and deploy
+## Scripts
 
-Build the app:
+- `npm run dev`: start Next.js in development mode
+- `npm run build`: production build
+- `npm run start`: run the production server from a completed build
+- `npm run lint`: run ESLint
+- `npm run format`: run Prettier across source and docs
+
+## Build And CI
+
+Local production check:
 
 ```shell
+npm run lint
 npm run build
 ```
 
-Start the production server:
+GitHub Actions build workflow is in [.github/workflows/deploy.yml](.github/workflows/deploy.yml) and currently runs:
+
+1. `npm ci --prefer-offline --no-audit`
+2. `npm run lint`
+3. `npm run build`
+
+## Deployment Variants
+
+Routing behavior is configured in [next.config.mjs](next.config.mjs):
+
+- Root deployment (default): do not set `DEPLOY_TARGET`
+- Subpath deployment: set `DEPLOY_TARGET=<subpath>`
+
+Example for GitHub Pages style hosting:
 
 ```shell
-npm run start
+DEPLOY_TARGET=planning-poker npm run build
 ```
 
-### Netlify deployment
+This applies both `basePath` and `assetPrefix` to `/<DEPLOY_TARGET>`.
 
-The repo includes a `netlify.toml` that configures Netlify to build with Next.js using the Essential Next.js plugin:
+### Netlify
+
+The repo includes [netlify.toml](netlify.toml) with the Essential Next.js plugin.
 
 ```toml
 [build]
@@ -54,23 +78,76 @@ The repo includes a `netlify.toml` that configures Netlify to build with Next.js
   package = "@netlify/plugin-nextjs"
 ```
 
-Netlify will automatically install `@netlify/plugin-nextjs` at build time. If you need to deploy under a subpath such as `/planning-poker`, set `DEPLOY_TARGET=planning-poker` for the build.
+If deploying under a subpath, set `DEPLOY_TARGET` in Netlify build environment variables.
 
-## Supabase schema
+## Supabase Schema Bootstrap
 
-The app reads and writes directly to Supabase from the browser, and expects three public tables:
+The app reads and writes directly to Supabase from the browser. It expects these public tables:
 
 - `users`: session members and their `last_presence`
 - `scores`: one score per user per session
-- `options`: per-session settings such as the point sequence
+- `options`: per-session settings (point sequence, stage, moderators, confirmations)
+- `rounds`: historical snapshots saved when returning from results to voting
 
-To recreate the schema, run [supabase/schema.sql](supabase/schema.sql) in the Supabase SQL editor. The script:
+To recreate schema and policies, run [supabase/schema.sql](supabase/schema.sql) in the Supabase SQL editor.
 
-- recreates the `users`, `scores`, and `options` tables
-- adds `created_at` and `updated_at` columns for debugging
-- creates the composite keys required by the app's `upsert()` calls
-- enables RLS with permissive anon/authenticated policies so the current client continues to work
-- adds `scores` and `options` to `supabase_realtime`
+The script will:
+
+- recreate `users`, `scores`, `options`, and `rounds`
+- create `created_at` and `updated_at` timestamps and update triggers
+- apply keys/indexes needed by upsert and session filters
+- enable RLS with permissive anon/authenticated policies
+- add realtime publication for `scores`, `options`, and `rounds`
+
+## Runtime Notes
+
+### Session Routing
+
+- Session id comes from URL hash (`/voting#abc1234`)
+- Without a hash, app generates or redirects to a valid voting route
+- `results` and `options` routes require both hash session and a locally stored user for that session
+
+### Local User Storage
+
+User storage is session-aware in [src/utils/userStorage.js](src/utils/userStorage.js):
+
+- stores a preferred name profile
+- stores per-session user memberships keyed by session hash
+- avoids one session identity overwriting another session identity
+
+### Realtime Synchronization
+
+Session state and rounds state use guarded refreshes in [src/hooks/useSessionState.js](src/hooks/useSessionState.js) and [src/hooks/useRounds.js](src/hooks/useRounds.js):
+
+- subscriptions trigger canonical refetches
+- stale async responses are ignored when session/request token no longer matches
+- roster updates subscribe to `users` events for faster convergence
+
+## Troubleshooting
+
+### `npm run dev` exits unexpectedly
+
+1. Confirm Node version matches CI expectation (`node-version: '24'` in workflow).
+2. Reinstall dependencies: `npm ci`.
+3. Run lint/build to surface issues quickly:
+
+```shell
+npm run lint
+npm run build
+```
+
+### Session opens but user list or scores seem stale
+
+1. Verify all clients are in the same hash session id.
+2. Confirm Supabase realtime includes `scores`, `options`, and `rounds` tables.
+3. Confirm `users` rows are being updated with recent `last_presence`.
+4. Refresh page to force a full state bootstrap.
+
+### Options or stage do not propagate
+
+1. Confirm `options` table exists and RLS allows read/write.
+2. Confirm key names in table include expected values (`stage`, `point_sequence`, `confirm`, `moderators`).
+3. Check browser console for Supabase channel errors.
 
 ## Project structure
 
