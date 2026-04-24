@@ -13,10 +13,6 @@ export const VotingScreen = ({ session, user: localUser }) => {
   const { user, users, scores, sequence, stage, isModerator, setStage } =
     useSessionState({ session, localUser });
   const userScore = scores.find(score => score.user_id === user?.id);
-  const visibleScores = React.useMemo(
-    () => scores.filter(score => score.user_id === user?.id),
-    [scores, user?.id],
-  );
 
   React.useEffect(() => {
     if (clipboardState.value) {
@@ -68,7 +64,7 @@ export const VotingScreen = ({ session, user: localUser }) => {
         </button>
       </div>
 
-      <UserList me={user} users={users} scores={visibleScores} />
+      <UserList me={user} users={users} scores={scores} />
       <button
         type="button"
         className={styles.invite_line}
