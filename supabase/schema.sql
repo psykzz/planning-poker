@@ -25,6 +25,7 @@ create table public.users (
   id uuid primary key default gen_random_uuid(),
   session_name text not null,
   name text not null,
+  is_spectator boolean not null default false,
   last_presence timestamptz not null default timezone('utc', now()),
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())

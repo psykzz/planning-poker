@@ -4,10 +4,28 @@ import { SCORE_ICON_MAP } from '../../api/scores';
 import { scoreStats } from '../../utils/scoreStats';
 
 export const UserList = ({ me, users, scores, forceReveal = false }) => {
-  const { numericScores, lowest, highest, avg, stddev } = React.useMemo(
-    () => scoreStats(scores),
-    [scores],
+  const userById = React.useMemo(() => {
+    const byId = {};
+    (users || []).forEach(user => {
+      byId[user.id] = user;
+    });
+    return byId;
+  }, [users]);
+
+  const scoringUserScores = React.useMemo(
+    () =>
+      (scores || []).filter(score => {
+        const scoreUser = userById[score.user_id];
+        return !scoreUser?.is_spectator;
+      }),
+    [scores, userById],
   );
+
+  const { numericScores, lowest, highest, avg, stddev } = React.useMemo(
+    () => scoreStats(scoringUserScores),
+    [scoringUserScores],
+  );
+
   const scoreByUser = React.useMemo(() => {
     const byUser = {};
     scores?.forEach(score => {
@@ -23,8 +41,12 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
     const ordered = [...(users || [])].sort((a, b) => a.id.localeCompare(b.id));
     if (showScores) {
       return ordered.sort(
-        (a, b) =>
-          (scoreByUser[b.id]?.score ?? 0) - (scoreByUser[a.id]?.score ?? 0),
+        (a, b) => {
+          if (a.is_spectator !== b.is_spectator) {
+            return a.is_spectator ? 1 : -1;
+          }
+          return (scoreByUser[b.id]?.score ?? 0) - (scoreByUser[a.id]?.score ?? 0);
+        },
       );
     }
     return ordered;
@@ -47,6 +69,7 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
   const User = ({ user }) => {
     const isMe = user.id === me?.id;
     const score = scoreByUser[user.id];
+    const isSpectator = Boolean(user.is_spectator);
     const hasSubmittedScore = !!score;
     return (
       <li
@@ -56,6 +79,7 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
         <div className={`${styles.name} ${isMe ? styles.me : ''}`}>
           {user.name}
           {isMe ? ' (You)' : ''}
+          {isSpectator ? ' (Spectator)' : ''}
         </div>
         <div className={`${styles.card} ${styles.no_hover}`}>
           <Score {...{ isMe, score }} />

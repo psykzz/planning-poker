@@ -12,7 +12,7 @@ export const ResultsScreen = ({ session, user: localUser }) => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
-  const { user, users, scores, confirmEnabled, stage, isModerator, sessionDisplayName, sequence, toggleConfirm, setModeratorStatus, setSessionDisplayName, setUserName, setStage } =
+  const { user, users, scores, confirmEnabled, stage, isModerator, isSpectator, sessionDisplayName, sequence, toggleConfirm, setModeratorStatus, setSpectatorStatus, setSessionDisplayName, setUserName, setStage } =
     useSessionState({ session, localUser });
   const { rounds, selectedRound, isViewingHistory, selectRound } =
     useRounds({ session });
@@ -66,9 +66,11 @@ export const ResultsScreen = ({ session, user: localUser }) => {
         sequence={sequence}
         confirmEnabled={confirmEnabled}
         isModerator={isModerator}
+        isSpectator={isSpectator}
         sessionDisplayName={sessionDisplayName}
         toggleConfirm={toggleConfirm}
         setModeratorStatus={setModeratorStatus}
+        setSpectatorStatus={setSpectatorStatus}
         setSessionDisplayName={setSessionDisplayName}
         setUserName={setUserName}
       />

@@ -5,7 +5,12 @@ import { getStoredUser } from '../../utils/userStorage';
 
 import * as styles from './scorecards.module.css';
 
-export const ScoreCards = ({ options, session, selectedScore }) => {
+export const ScoreCards = ({
+  options,
+  session,
+  selectedScore,
+  onBecomeSpectator,
+}) => {
   const onSelectCard = React.useCallback(
     async value => {
       const user = getStoredUser(session);
@@ -53,6 +58,15 @@ export const ScoreCards = ({ options, session, selectedScore }) => {
           </button>
         ))}
       </div>
+      {onBecomeSpectator ? (
+        <button
+          type="button"
+          className={styles.spectator_link}
+          onClick={onBecomeSpectator}
+        >
+          Become a spectator
+        </button>
+      ) : null}
     </div>
   );
 };

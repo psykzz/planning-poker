@@ -85,6 +85,7 @@ If deploying under a subpath, set `DEPLOY_TARGET` in Netlify build environment v
 The app reads and writes directly to Supabase from the browser. It expects these public tables:
 
 - `users`: session members and their `last_presence`
+- `users`: session members with `is_spectator` role and `last_presence`
 - `scores`: one score per user per session
 - `options`: per-session settings (point sequence, stage, moderators, confirmations)
 - `rounds`: historical snapshots saved when returning from results to voting

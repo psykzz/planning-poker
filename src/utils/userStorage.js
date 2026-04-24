@@ -82,7 +82,13 @@ export const normalizeStoredUser = candidate => {
     return;
   }
 
-  return { id, name };
+  return {
+    id,
+    name,
+    ...(typeof candidate.is_spectator === 'boolean'
+      ? { is_spectator: candidate.is_spectator }
+      : {}),
+  };
 };
 
 export const getStoredUserName = () => {

@@ -18,9 +18,11 @@ export const Sidebar = ({
   sequence,
   confirmEnabled,
   isModerator,
+  isSpectator,
   sessionDisplayName,
   toggleConfirm,
   setModeratorStatus,
+  setSpectatorStatus,
   setSessionDisplayName,
   setUserName,
 }) => {
@@ -239,6 +241,22 @@ export const Sidebar = ({
                     />
                     <span>
                       {isModerator ? 'You are a moderator' : 'Not a moderator'}
+                    </span>
+                  </label>
+                </div>
+
+                <div className={styles.setting}>
+                  <span className={styles.label}>Spectator mode</span>
+                  <label className={styles.toggle_label}>
+                    <input
+                      type="checkbox"
+                      checked={isSpectator}
+                      onChange={e => setSpectatorStatus?.(e.target.checked)}
+                    />
+                    <span>
+                      {isSpectator
+                        ? 'You are spectating'
+                        : 'You can submit votes'}
                     </span>
                   </label>
                 </div>

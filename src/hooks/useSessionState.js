@@ -14,7 +14,7 @@ import {
   OPT_STAGE_DEFAULT,
   moderatorKey,
 } from '../api/options';
-import { fetchScores, updateAllScores } from '../api/scores';
+import { deleteScore, fetchScores, updateAllScores } from '../api/scores';
 import { createUser, fetchAllUsers, updateUserPresence } from '../api/users';
 
 export const REMOVE_SCORE = '-';
@@ -66,6 +66,7 @@ export const useSessionState = ({ session, localUser }) => {
   }, [user?.id]);
 
   const showScores = scores.length > 0 && scores.every(score => score.revealed);
+  const isSpectator = Boolean(user?.is_spectator);
   const nextSequence =
     POINT_SEQUENCES_SORTED[
       (POINT_SEQUENCES_SORTED.indexOf(sequence) + 1) %
@@ -355,6 +356,30 @@ export const useSessionState = ({ session, localUser }) => {
     [session, user],
   );
 
+  const setSpectatorStatus = React.useCallback(
+    async value => {
+      if (!session || !user?.id) return;
+      const nextValue = Boolean(value);
+
+      const updatedUser = await createUser(session, {
+        ...user,
+        is_spectator: nextValue,
+      });
+
+      setUser(updatedUser);
+      setUsers(currentUsers =>
+        currentUsers.map(currentUser =>
+          currentUser.id === updatedUser.id ? updatedUser : currentUser,
+        ),
+      );
+
+      if (nextValue) {
+        await deleteScore(session, user.id);
+      }
+    },
+    [session, user],
+  );
+
   const setStage = React.useCallback(
     value => {
       if (!session) return;
@@ -375,11 +400,13 @@ export const useSessionState = ({ session, localUser }) => {
     nextSequence,
     stage,
     isModerator,
+    isSpectator,
     sessionDisplayName,
     toggleScores,
     toggleConfirm,
     cycleSequence,
     setModeratorStatus,
+    setSpectatorStatus,
     setSessionDisplayName,
     setStage,
     setUserName,

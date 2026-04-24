@@ -13,9 +13,11 @@ export const OptionsScreen = ({ session, user: localUser }) => {
     sequence,
     confirmEnabled,
     isModerator,
+    isSpectator,
     sessionDisplayName,
     toggleConfirm,
     setModeratorStatus,
+    setSpectatorStatus,
     setSessionDisplayName,
     setUserName,
   } = useSessionState({ session, localUser });
@@ -191,6 +193,21 @@ export const OptionsScreen = ({ session, user: localUser }) => {
           <p className={styles.hint}>
             Moderators can reveal, reset, and change card types during the
             session.
+          </p>
+        </div>
+
+        <div className={styles.setting}>
+          <span className={styles.label}>Spectator mode</span>
+          <label className={styles.toggle_label}>
+            <input
+              type="checkbox"
+              checked={isSpectator}
+              onChange={e => setSpectatorStatus(e.target.checked)}
+            />
+            <span>{isSpectator ? 'You are spectating' : 'You can vote'}</span>
+          </label>
+          <p className={styles.hint}>
+            Spectators stay visible in the roster but are excluded from voting.
           </p>
         </div>
       </div>
