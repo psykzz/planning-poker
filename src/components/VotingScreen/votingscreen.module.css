@@ -33,6 +33,13 @@
   border-top: 1px solid var(--border-color);
 }
 
+.spectator_hint {
+  margin: 0;
+  text-align: center;
+  color: var(--text-color-subtle);
+  font-weight: 600;
+}
+
 .header h1 {
   font-size: clamp(1.9rem, 3vw, 2.6rem);
   letter-spacing: -0.02em;

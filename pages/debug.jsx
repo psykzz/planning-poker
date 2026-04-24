@@ -4,6 +4,7 @@ import { fetchAllUsers } from '../src/api/users';
 import { fetchScores } from '../src/api/scores';
 import { fetchRounds } from '../src/api/rounds';
 import { supabase } from '../src/api/client';
+import { getStoredUser, getStoredUserName } from '../src/utils/userStorage';
 
 const Section = ({ title, data }) => (
   <section style={{ marginBottom: '2rem' }}>
@@ -52,8 +53,10 @@ const Debug = () => {
 
     setSession(hashSession);
 
-    const stored = JSON.parse(localStorage.getItem('user') || 'null');
-    setLocalUser(stored);
+    setLocalUser({
+      preferredName: getStoredUserName(),
+      sessionUser: getStoredUser(hashSession),
+    });
 
     const load = async () => {
       try {

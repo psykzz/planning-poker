@@ -1,5 +1,6 @@
 import React from 'react';
 import { addSubscription, removeSubscription } from '../api/client';
+import { setStoredUser } from '../utils/userStorage';
 import {
   fetchOption,
   submitOption,
@@ -13,7 +14,7 @@ import {
   OPT_STAGE_DEFAULT,
   moderatorKey,
 } from '../api/options';
-import { fetchScores, updateAllScores } from '../api/scores';
+import { deleteScore, fetchScores, updateAllScores } from '../api/scores';
 import { createUser, fetchAllUsers, updateUserPresence } from '../api/users';
 
 export const REMOVE_SCORE = '-';
@@ -49,8 +50,23 @@ export const useSessionState = ({ session, localUser }) => {
   const [isModerator, setIsModerator] = React.useState(false);
   const [sessionDisplayName, setSessionDisplayNameState] = React.useState('');
   const [stage, setStageState] = React.useState(null);
+  const sessionRef = React.useRef(session);
+  const userIdRef = React.useRef();
+  const usersRequestRef = React.useRef(0);
+  const scoresRequestRef = React.useRef(0);
+  const optionsRequestRef = React.useRef(0);
+  const userRequestRef = React.useRef(0);
+
+  React.useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
+  React.useEffect(() => {
+    userIdRef.current = user?.id;
+  }, [user?.id]);
 
   const showScores = scores.length > 0 && scores.every(score => score.revealed);
+  const isSpectator = Boolean(user?.is_spectator);
   const nextSequence =
     POINT_SEQUENCES_SORTED[
       (POINT_SEQUENCES_SORTED.indexOf(sequence) + 1) %
@@ -59,13 +75,19 @@ export const useSessionState = ({ session, localUser }) => {
 
   const updateUsers = React.useCallback(async currentSession => {
     if (!currentSession) return;
+    const requestId = ++usersRequestRef.current;
     const allUsers = await fetchAllUsers(currentSession);
+    if (
+      sessionRef.current !== currentSession ||
+      requestId !== usersRequestRef.current
+    ) {
+      return;
+    }
     const afkSeconds = 30; // 3 * the presence timer
     const cutoffTimestamp = Date.now() - afkSeconds * 1000;
     const activeUsers = allUsers.filter(
       currentUser =>
-        parseISOString(currentUser.last_presence).getTime() >
-        cutoffTimestamp,
+        parseISOString(currentUser.last_presence).getTime() > cutoffTimestamp,
     );
     setUsers(activeUsers);
   }, []);
@@ -93,7 +115,14 @@ export const useSessionState = ({ session, localUser }) => {
         return;
       }
 
+      const requestId = ++userRequestRef.current;
       const newUser = await createUser(currentSession, candidate);
+      if (
+        sessionRef.current !== currentSession ||
+        requestId !== userRequestRef.current
+      ) {
+        return;
+      }
       setUser(newUser);
     },
     [],
@@ -101,144 +130,137 @@ export const useSessionState = ({ session, localUser }) => {
 
   const updateScores = React.useCallback(async currentSession => {
     if (!currentSession) return;
+    const requestId = ++scoresRequestRef.current;
     const nextScores = await fetchScores(currentSession);
+    if (
+      sessionRef.current !== currentSession ||
+      requestId !== scoresRequestRef.current
+    ) {
+      return;
+    }
     setScores(nextScores);
     setScoresLoaded(true);
-  }, []);
-
-  const updateScore = React.useCallback(payload => {
-    const oldUser = payload.new?.user_id;
-    const newScore = {
-      user_id: payload.new?.user_id,
-      score: payload.new?.score,
-      revealed: payload.new?.revealed,
-    };
-    setScores(currentScores => [
-      ...currentScores.filter(score => score.user_id !== oldUser),
-      newScore,
-    ]);
-  }, []);
-
-  const removeScore = React.useCallback(payload => {
-    const oldUser = payload.old?.user_id;
-    setScores(currentScores => [
-      ...currentScores.filter(score => score.user_id !== oldUser),
-    ]);
   }, []);
 
   const updateSessionOptions = React.useCallback(
     async (currentSession, currentUserId) => {
       if (!currentSession) return;
-      const pointSequence = await fetchOption(
-        currentSession,
-        OPT_POINT_KEY,
-        OPT_POINT_SEQ_DEFAULT,
-      );
+      const requestId = ++optionsRequestRef.current;
+      const [
+        pointSequence,
+        confirm,
+        displayName,
+        currentStage,
+        moderatorsValue,
+      ] = await Promise.all([
+        fetchOption(currentSession, OPT_POINT_KEY, OPT_POINT_SEQ_DEFAULT),
+        fetchOption(currentSession, OPT_CONFIRM_KEY, OPT_CONFIRM_DEFAULT),
+        fetchOption(currentSession, OPT_SESSION_NAME_KEY, ''),
+        fetchOption(currentSession, OPT_STAGE_KEY, OPT_STAGE_DEFAULT),
+        fetchOption(currentSession, OPT_MODERATORS_KEY, ''),
+      ]);
+
+      if (
+        sessionRef.current !== currentSession ||
+        requestId !== optionsRequestRef.current
+      ) {
+        return;
+      }
+
       setSequence(pointSequence);
-
-      const confirm = await fetchOption(
-        currentSession,
-        OPT_CONFIRM_KEY,
-        OPT_CONFIRM_DEFAULT,
-      );
       setConfirmEnabled(confirm === 'true');
-
-      const displayName = await fetchOption(
-        currentSession,
-        OPT_SESSION_NAME_KEY,
-        '',
-      );
       setSessionDisplayNameState(displayName);
-
-      const currentStage = await fetchOption(
-        currentSession,
-        OPT_STAGE_KEY,
-        OPT_STAGE_DEFAULT,
-      );
       setStageState(currentStage);
 
-      if (currentUserId) {
-        const moderatorsValue = await fetchOption(
+      if (!currentUserId) {
+        setIsModerator(false);
+        return;
+      }
+
+      const moderatorIds = parseModeratorIds(moderatorsValue);
+
+      if (moderatorIds.includes(currentUserId)) {
+        setIsModerator(true);
+        return;
+      }
+
+      const legacyModValue = await fetchOption(
+        currentSession,
+        moderatorKey(currentUserId),
+        'false',
+      );
+
+      if (
+        sessionRef.current !== currentSession ||
+        requestId !== optionsRequestRef.current
+      ) {
+        return;
+      }
+
+      const isLegacyModerator = legacyModValue === 'true';
+      setIsModerator(isLegacyModerator);
+
+      if (isLegacyModerator) {
+        submitOption(
           currentSession,
           OPT_MODERATORS_KEY,
-          '',
+          [...new Set([...moderatorIds, currentUserId])].join(','),
         );
-        const moderatorIds = parseModeratorIds(moderatorsValue);
-
-        if (moderatorIds.includes(currentUserId)) {
-          setIsModerator(true);
-          return;
-        }
-
-        const legacyModValue = await fetchOption(
-          currentSession,
-          moderatorKey(currentUserId),
-          'false',
-        );
-        const isLegacyModerator = legacyModValue === 'true';
-        setIsModerator(isLegacyModerator);
-
-        if (isLegacyModerator) {
-          submitOption(
-            currentSession,
-            OPT_MODERATORS_KEY,
-            [...new Set([...moderatorIds, currentUserId])].join(','),
-          );
-        }
       }
     },
     [],
   );
 
   React.useEffect(() => {
-    if (!session) return;
+    if (!session) {
+      setScores([]);
+      setScoresLoaded(false);
+      return;
+    }
+
     setScoresLoaded(false);
-    const subscriptionId = addSubscription(session, 'scores', payload => {
-      if (payload.eventType === 'DELETE') {
-        removeScore(payload);
-      } else {
-        updateScore(payload);
-      }
+    const subscriptionId = addSubscription(session, 'scores', () => {
+      updateScores(session);
     });
+
     updateScores(session);
     return () => removeSubscription(subscriptionId);
-  }, [session, removeScore, updateScore, updateScores]);
+  }, [session, updateScores]);
 
   React.useEffect(() => {
-    if (!session) return;
-    const subscriptionId = addSubscription(session, 'options', payload => {
-      const key = payload.new?.key;
-      switch (key) {
-        case OPT_CONFIRM_KEY:
-          setConfirmEnabled(payload.new?.value === 'true');
-          break;
-        case OPT_POINT_KEY:
-          setSequence(payload.new?.value || OPT_POINT_SEQ_DEFAULT);
-          break;
-        case OPT_SESSION_NAME_KEY:
-          setSessionDisplayNameState(payload.new?.value || '');
-          break;
-        case OPT_STAGE_KEY:
-          setStageState(payload.new?.value || OPT_STAGE_DEFAULT);
-          break;
-        case OPT_MODERATORS_KEY:
-          if (user?.id) {
-            const moderatorIds = parseModeratorIds(payload.new?.value);
-            setIsModerator(moderatorIds.includes(user.id));
-          }
-          break;
-        default:
-          if (key?.startsWith('moderator:')) {
-            // Keep legacy option behavior for older sessions.
-            if (key === moderatorKey(user?.id)) {
-              setIsModerator(payload.new?.value === 'true');
-            }
-          }
-          break;
-      }
+    if (!session) {
+      setConfirmEnabled(OPT_CONFIRM_DEFAULT === 'true');
+      setSequence(OPT_POINT_SEQ_DEFAULT);
+      setSessionDisplayNameState('');
+      setStageState(null);
+      setIsModerator(false);
+      return;
+    }
+
+    const subscriptionId = addSubscription(session, 'options', () => {
+      updateSessionOptions(session, userIdRef.current);
     });
-    updateSessionOptions(session, user?.id);
+
+    updateSessionOptions(session, userIdRef.current);
     return () => removeSubscription(subscriptionId);
+  }, [session, updateSessionOptions]);
+
+  React.useEffect(() => {
+    if (!session) {
+      setUsers([]);
+      return;
+    }
+
+    const subscriptionId = addSubscription(session, 'users', () => {
+      updateUsers(session);
+    });
+
+    updateUsers(session);
+    return () => removeSubscription(subscriptionId);
+  }, [session, updateUsers]);
+
+  React.useEffect(() => {
+    updateSessionOptions(session, user?.id);
   }, [session, user?.id, updateSessionOptions]);
 
   React.useEffect(() => {
@@ -246,12 +268,10 @@ export const useSessionState = ({ session, localUser }) => {
   }, [session, localUser, getOrCreateUser]);
 
   React.useEffect(() => {
-    updateUsers(session);
-
-    if (user?.id) {
-      localStorage.setItem('user', JSON.stringify(user));
+    if (session && user?.id) {
+      setStoredUser(user, session);
     }
-  }, [session, user, updateUsers]);
+  }, [session, user]);
 
   React.useEffect(() => {
     if (!session || !user?.id) return;
@@ -336,6 +356,30 @@ export const useSessionState = ({ session, localUser }) => {
     [session, user],
   );
 
+  const setSpectatorStatus = React.useCallback(
+    async value => {
+      if (!session || !user?.id) return;
+      const nextValue = Boolean(value);
+
+      const updatedUser = await createUser(session, {
+        ...user,
+        is_spectator: nextValue,
+      });
+
+      setUser(updatedUser);
+      setUsers(currentUsers =>
+        currentUsers.map(currentUser =>
+          currentUser.id === updatedUser.id ? updatedUser : currentUser,
+        ),
+      );
+
+      if (nextValue) {
+        await deleteScore(session, user.id);
+      }
+    },
+    [session, user],
+  );
+
   const setStage = React.useCallback(
     value => {
       if (!session) return;
@@ -356,11 +400,13 @@ export const useSessionState = ({ session, localUser }) => {
     nextSequence,
     stage,
     isModerator,
+    isSpectator,
     sessionDisplayName,
     toggleScores,
     toggleConfirm,
     cycleSequence,
     setModeratorStatus,
+    setSpectatorStatus,
     setSessionDisplayName,
     setStage,
     setUserName,

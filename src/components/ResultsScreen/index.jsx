@@ -1,5 +1,6 @@
 import React from 'react';
 import { useRouter } from 'next/router';
+import { toast } from 'react-toastify';
 import { UserList } from '../UserList';
 import { Sidebar } from '../Sidebar';
 import { useSessionState } from '../../hooks/useSessionState';
@@ -10,26 +11,36 @@ import * as styles from './resultsscreen.module.css';
 export const ResultsScreen = ({ session, user: localUser }) => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const { user, users, scores, confirmEnabled, stage, isModerator, sessionDisplayName, sequence, toggleConfirm, setModeratorStatus, setSessionDisplayName, setUserName, setStage } =
+  const [isResetting, setIsResetting] = React.useState(false);
+  const { user, users, scores, confirmEnabled, stage, isModerator, isSpectator, sessionDisplayName, sequence, toggleConfirm, setModeratorStatus, setSpectatorStatus, setSessionDisplayName, setUserName, setStage } =
     useSessionState({ session, localUser });
   const { rounds, selectedRound, isViewingHistory, selectRound } =
     useRounds({ session });
 
+  const navigatingRef = React.useRef(false);
   React.useEffect(() => {
-    if (stage !== 'voting') {
+    if (stage !== 'voting' || navigatingRef.current) {
       return;
     }
-
+    navigatingRef.current = true;
     router.replace(`/voting#${session}`);
   }, [router, session, stage]);
 
-  const goToVoting = React.useCallback(() => {
+  const goToVoting = React.useCallback(async () => {
     if (
       isModerator &&
       (!confirmEnabled || window.confirm('Reset scores and go back to voting?'))
     ) {
-      resetScoresWithRound(session, scores, users);
-      setStage('voting');
+      try {
+        setIsResetting(true);
+        await resetScoresWithRound(session, scores, users);
+        setStage('voting');
+      } catch (error) {
+        toast.error('Could not reset scores. Please try again.');
+        console.warn('Failed to reset scores', error);
+      } finally {
+        setIsResetting(false);
+      }
     }
   }, [session, scores, users, isModerator, confirmEnabled, setStage]);
 
@@ -55,9 +66,11 @@ export const ResultsScreen = ({ session, user: localUser }) => {
         sequence={sequence}
         confirmEnabled={confirmEnabled}
         isModerator={isModerator}
+        isSpectator={isSpectator}
         sessionDisplayName={sessionDisplayName}
         toggleConfirm={toggleConfirm}
         setModeratorStatus={setModeratorStatus}
+        setSpectatorStatus={setSpectatorStatus}
         setSessionDisplayName={setSessionDisplayName}
         setUserName={setUserName}
       />
@@ -74,14 +87,16 @@ export const ResultsScreen = ({ session, user: localUser }) => {
           type="button"
           className={styles.route}
           onClick={goToVoting}
-          disabled={!isModerator}
+          disabled={!isModerator || isResetting}
           title={
             !isModerator
               ? 'Become a moderator in Session to control the session stage'
-              : ''
+              : isResetting
+                ? 'Resetting scores'
+                : ''
           }
         >
-          Back to voting
+          {isResetting ? 'Resetting...' : 'Back to voting'}
         </button>
       </div>
 

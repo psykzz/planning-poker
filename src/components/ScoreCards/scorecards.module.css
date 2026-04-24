@@ -1,6 +1,7 @@
 .card_container {
   display: flex;
   flex-direction: column;
+  align-items: center;
   text-align: center;
   margin-top: 1rem;
 }
@@ -45,6 +46,22 @@
   background: color-mix(in srgb, var(--color-discord-blue), var(--surface-accent) 80%);
 }
 
+.spectator_link {
+  border: none;
+  background: transparent;
+  color: var(--text-color-subtle);
+  font-size: 0.82rem;
+  line-height: 1.2;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.spectator_link:hover {
+  color: var(--text-color);
+}
+
 @media (max-width: 768px) {
   .card_container {
     margin-top: 16px;
@@ -61,5 +78,9 @@
     min-width: 4.5rem;
     min-height: 4.5rem;
     font-size: 1.35rem;
+  }
+
+  .spectator_link {
+    display: none;
   }
 }

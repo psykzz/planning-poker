@@ -27,7 +27,8 @@ jobs:
           node-version: '24'
           cache: 'npm'
       - run: npm ci --prefer-offline --no-audit
-      - run: npm run build:prefixed
+      - run: npm run lint
+      - run: npm run build
       # - name: Deploy
       #   uses: peaceiris/actions-gh-pages@v3
       #   with:

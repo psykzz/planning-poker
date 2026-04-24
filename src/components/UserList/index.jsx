@@ -1,39 +1,31 @@
 import React from 'react';
 import * as styles from './userlist.module.css';
 import { SCORE_ICON_MAP } from '../../api/scores';
-
-const standardDeviation = array => {
-  const n = array.length;
-  if (!n) return NaN;
-  const mean = array.reduce((a, b) => a + b) / n;
-  return Math.sqrt(
-    array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n,
-  );
-};
-
-const average = arr => arr.reduce((p, c) => p + c, 0) / arr.length;
+import { scoreStats } from '../../utils/scoreStats';
 
 export const UserList = ({ me, users, scores, forceReveal = false }) => {
-  const numericScores = React.useMemo(
-    () => scores.filter(score => score.score >= 0).map(score => score.score),
-    [scores],
+  const userById = React.useMemo(() => {
+    const byId = {};
+    (users || []).forEach(user => {
+      byId[user.id] = user;
+    });
+    return byId;
+  }, [users]);
+
+  const scoringUserScores = React.useMemo(
+    () =>
+      (scores || []).filter(score => {
+        const scoreUser = userById[score.user_id];
+        return !scoreUser?.is_spectator;
+      }),
+    [scores, userById],
   );
-  const lowest = React.useMemo(
-    () => (numericScores.length ? Math.min(...numericScores) : null),
-    [numericScores],
+
+  const { numericScores, lowest, highest, avg, stddev } = React.useMemo(
+    () => scoreStats(scoringUserScores),
+    [scoringUserScores],
   );
-  const highest = React.useMemo(
-    () => (numericScores.length ? Math.max(...numericScores) : null),
-    [numericScores],
-  );
-  const stddev = React.useMemo(
-    () => (numericScores.length ? standardDeviation(numericScores) : null),
-    [numericScores],
-  );
-  const avg = React.useMemo(
-    () => (numericScores.length ? average(numericScores) : null),
-    [numericScores],
-  );
+
   const scoreByUser = React.useMemo(() => {
     const byUser = {};
     scores?.forEach(score => {
@@ -48,10 +40,14 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
   const sortedUsers = React.useMemo(() => {
     const ordered = [...(users || [])].sort((a, b) => a.id.localeCompare(b.id));
     if (showScores) {
-      return ordered.sort(
-        (a, b) =>
-          (scoreByUser[b.id]?.score ?? 0) - (scoreByUser[a.id]?.score ?? 0),
-      );
+      return ordered.sort((a, b) => {
+        if (a.is_spectator !== b.is_spectator) {
+          return a.is_spectator ? 1 : -1;
+        }
+        return (
+          (scoreByUser[b.id]?.score ?? 0) - (scoreByUser[a.id]?.score ?? 0)
+        );
+      });
     }
     return ordered;
   }, [users, showScores, scoreByUser]);
@@ -73,6 +69,7 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
   const User = ({ user }) => {
     const isMe = user.id === me?.id;
     const score = scoreByUser[user.id];
+    const isSpectator = Boolean(user.is_spectator);
     const hasSubmittedScore = !!score;
     return (
       <li
@@ -82,6 +79,7 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
         <div className={`${styles.name} ${isMe ? styles.me : ''}`}>
           {user.name}
           {isMe ? ' (You)' : ''}
+          {isSpectator ? ' (Spectator)' : ''}
         </div>
         <div className={`${styles.card} ${styles.no_hover}`}>
           <Score {...{ isMe, score }} />

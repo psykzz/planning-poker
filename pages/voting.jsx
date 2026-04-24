@@ -5,6 +5,11 @@ import { useRouter } from 'next/router';
 import Layout from '../src/components/Layout';
 import { VotingScreen } from '../src/components/VotingScreen';
 import * as styles from '../src/components/JoinSessionPrompt/joinsessionprompt.module.css';
+import {
+  getStoredUser,
+  getStoredUserName,
+  setStoredUser,
+} from '../src/utils/userStorage';
 
 const Voting = () => {
   const router = useRouter();
@@ -15,14 +20,16 @@ const Voting = () => {
 
   React.useEffect(() => {
     const hashSession = window.location.hash.slice(1);
-    const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
-    const hasUser = Boolean(storedUser?.id && storedUser?.name);
 
     if (!hashSession) {
       const nextSession = nanoid(7);
       router.replace(`/voting#${nextSession}`);
       return;
     }
+
+    const storedUser = getStoredUser(hashSession);
+    const storedName = getStoredUserName();
+    const hasUser = Boolean(storedUser?.id && storedUser?.name);
 
     setSession(hashSession);
     if (hasUser) {
@@ -33,6 +40,7 @@ const Voting = () => {
     }
 
     setUser(undefined);
+    setNameInput(storedName || '');
     setReady(false);
   }, [router]);
 
@@ -48,11 +56,11 @@ const Voting = () => {
         id: globalThis.crypto.randomUUID(),
         name: normalizedName,
       };
-      localStorage.setItem('user', JSON.stringify(nextUser));
+      setStoredUser(nextUser, session);
       setUser(nextUser);
       setReady(true);
     },
-    [nameInput],
+    [nameInput, session],
   );
 
   return (

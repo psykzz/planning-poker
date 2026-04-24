@@ -20,10 +20,12 @@ export const VotingScreen = ({ session, user: localUser }) => {
     sequence,
     stage,
     isModerator,
+    isSpectator,
     sessionDisplayName,
     confirmEnabled,
     toggleConfirm,
     setModeratorStatus,
+    setSpectatorStatus,
     setSessionDisplayName,
     setUserName,
     setStage,
@@ -39,11 +41,12 @@ export const VotingScreen = ({ session, user: localUser }) => {
     }
   }, [clipboardState]);
 
+  const navigatingRef = React.useRef(false);
   React.useEffect(() => {
-    if (stage !== 'results') {
+    if (stage !== 'results' || navigatingRef.current) {
       return;
     }
-
+    navigatingRef.current = true;
     router.replace(`/results#${session}`);
   }, [router, session, stage]);
 
@@ -56,6 +59,15 @@ export const VotingScreen = ({ session, user: localUser }) => {
   const goToResults = React.useCallback(() => {
     setStage('results');
   }, [setStage]);
+
+  const becomeSpectator = React.useCallback(async () => {
+    try {
+      await setSpectatorStatus(true);
+    } catch (error) {
+      toast.error('Could not switch to spectator mode. Please try again.');
+      console.warn('Failed to switch spectator status', error);
+    }
+  }, [setSpectatorStatus]);
 
   return (
     <div className={styles.container}>
@@ -79,9 +91,11 @@ export const VotingScreen = ({ session, user: localUser }) => {
         sequence={sequence}
         confirmEnabled={confirmEnabled}
         isModerator={isModerator}
+        isSpectator={isSpectator}
         sessionDisplayName={sessionDisplayName}
         toggleConfirm={toggleConfirm}
         setModeratorStatus={setModeratorStatus}
+        setSpectatorStatus={setSpectatorStatus}
         setSessionDisplayName={setSessionDisplayName}
         setUserName={setUserName}
       />
@@ -121,11 +135,18 @@ export const VotingScreen = ({ session, user: localUser }) => {
             invite new members +
           </button>
           <div className={styles.sticky_cards}>
-            <ScoreCards
-              session={session}
-              options={POINT_SEQUENCES[sequence]}
-              selectedScore={userScore?.score}
-            />
+            {isSpectator ? (
+              <p className={styles.spectator_hint}>
+                Spectator mode is enabled. Switch it off in Options to vote.
+              </p>
+            ) : (
+              <ScoreCards
+                session={session}
+                options={POINT_SEQUENCES[sequence]}
+                selectedScore={userScore?.score}
+                onBecomeSpectator={becomeSpectator}
+              />
+            )}
           </div>
         </div>
       </section>

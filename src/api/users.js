@@ -5,19 +5,20 @@ export const createUser = async (session, user) => {
     throw new Error('User id and name are required');
   }
 
+  const payload = {
+    id: user.id,
+    name: user.name,
+    session_name: session,
+    last_presence: new Date().toISOString(),
+  };
+
+  if (typeof user.is_spectator === 'boolean') {
+    payload.is_spectator = user.is_spectator;
+  }
+
   const { data: newUser, error } = await supabase
     .from('users')
-    .upsert(
-      [
-        {
-          id: user.id,
-          name: user.name,
-          session_name: session,
-          last_presence: new Date().toISOString(),
-        },
-      ],
-      { onConflict: 'id' },
-    )
+    .upsert([payload], { onConflict: 'id' })
     .select()
     .single();
 

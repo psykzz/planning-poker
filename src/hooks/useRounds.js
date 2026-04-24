@@ -6,43 +6,81 @@ export const useRounds = ({ session }) => {
   const [rounds, setRounds] = React.useState([]);
   const [selectedRound, setSelectedRound] = React.useState(null);
   const [isViewingHistory, setIsViewingHistory] = React.useState(false);
+  const sessionRef = React.useRef(session);
+  const roundsRequestRef = React.useRef(0);
 
-  // Fetch initial rounds
   React.useEffect(() => {
-    if (!session) return;
-
-    (async () => {
-      try {
-        const initialRounds = await fetchRounds(session);
-        setRounds(initialRounds);
-      } catch (err) {
-        // Silently ignore errors - rounds table might not exist yet or not be accessible
-        console.warn('Failed to fetch rounds:', err);
-        setRounds([]);
-      }
-    })();
+    sessionRef.current = session;
   }, [session]);
 
-  // Subscribe to new rounds
-  React.useEffect(() => {
-    if (!session) return;
+  const refreshRounds = React.useCallback(async currentSession => {
+    if (!currentSession) {
+      setRounds([]);
+      setSelectedRound(null);
+      setIsViewingHistory(false);
+      return;
+    }
 
-    const handleNewRound = payload => {
-      if (payload.eventType === 'INSERT') {
-        setRounds(currentRounds => [payload.new, ...currentRounds]);
-      } else if (payload.eventType === 'DELETE') {
-        setRounds(currentRounds =>
-          currentRounds.filter(r => r.id !== payload.old.id),
-        );
+    const requestId = ++roundsRequestRef.current;
+
+    try {
+      const nextRounds = await fetchRounds(currentSession);
+      if (
+        sessionRef.current !== currentSession ||
+        requestId !== roundsRequestRef.current
+      ) {
+        return;
       }
-    };
 
-    const channel = addSubscription(session, 'rounds', handleNewRound);
+      setRounds(nextRounds);
+      setSelectedRound(currentRound => {
+        if (!currentRound) {
+          return null;
+        }
+
+        const nextSelectedRound =
+          nextRounds.find(round => round.id === currentRound.id) || null;
+
+        if (!nextSelectedRound) {
+          setIsViewingHistory(false);
+        }
+
+        return nextSelectedRound;
+      });
+    } catch (err) {
+      if (
+        sessionRef.current !== currentSession ||
+        requestId !== roundsRequestRef.current
+      ) {
+        return;
+      }
+
+      // Silently ignore errors - rounds table might not exist yet or not be accessible
+      console.warn('Failed to fetch rounds:', err);
+      setRounds([]);
+      setSelectedRound(null);
+      setIsViewingHistory(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!session) {
+      setRounds([]);
+      setSelectedRound(null);
+      setIsViewingHistory(false);
+      return;
+    }
+
+    const channel = addSubscription(session, 'rounds', () => {
+      refreshRounds(session);
+    });
+
+    refreshRounds(session);
 
     return () => {
       removeSubscription(channel);
     };
-  }, [session]);
+  }, [session, refreshRounds]);
 
   const selectRound = React.useCallback(
     roundId => {

@@ -2,6 +2,13 @@ import React from 'react';
 import { nanoid } from 'nanoid';
 import { PlanningPoker } from '../PlanningPoker';
 import * as styles from './hero.module.css';
+import {
+  clearStoredUser,
+  getStoredUser,
+  getStoredUserName,
+  normalizeStoredUser,
+  setStoredUser,
+} from '../../utils/userStorage';
 
 export const Hero = () => {
   const [session, setSession] = React.useState('');
@@ -9,20 +16,13 @@ export const Hero = () => {
   const [nameInput, setNameInput] = React.useState('');
   const hasUser = Boolean(user?.id && user?.name);
 
-  const normalizeUser = React.useCallback(storedUser => {
-    if (!storedUser?.name) return;
-    return {
-      id: storedUser.id || globalThis.crypto.randomUUID(),
-      name: storedUser.name,
-    };
-  }, []);
-
   const onHashChange = React.useCallback(() => {
-    setSession(window.location.hash.slice(1));
-  }, []);
+    const nextSession = window.location.hash.slice(1);
+    const storedUser = nextSession ? getStoredUser(nextSession) : undefined;
+    const storedName = getStoredUserName();
 
-  const createOrRestoreUser = React.useCallback(() => {
-    const storedUser = normalizeUser(JSON.parse(localStorage.getItem('user')));
+    setSession(nextSession);
+
     if (storedUser) {
       setUser(storedUser);
       setNameInput(storedUser.name);
@@ -30,23 +30,23 @@ export const Hero = () => {
     }
 
     setUser(undefined);
-  }, [normalizeUser]);
+    setNameInput(storedName || '');
+  }, []);
 
   React.useEffect(() => {
     window.addEventListener('hashchange', onHashChange);
     onHashChange();
-    createOrRestoreUser();
 
     return () => window.removeEventListener('hashchange', onHashChange);
-  }, [createOrRestoreUser, onHashChange]);
+  }, [onHashChange]);
 
   React.useEffect(() => {
-    if (!user?.id || !user?.name) {
+    if (!user?.id || !user?.name || !session) {
       return;
     }
 
-    localStorage.setItem('user', JSON.stringify(user));
-  }, [user]);
+    setStoredUser(user, session);
+  }, [session, user]);
 
   const ensureUser = React.useCallback(() => {
     if (user?.id && user?.name) {
@@ -58,26 +58,32 @@ export const Hero = () => {
       return null;
     }
 
-    const nextUser = normalizeUser({ name: normalizedName });
+    const nextUser = normalizeStoredUser({ name: normalizedName });
     setUser(nextUser);
     return nextUser;
-  }, [nameInput, normalizeUser, user]);
+  }, [nameInput, user]);
 
   const createSession = React.useCallback(() => {
     if (typeof window === 'undefined') {
       return;
     }
-    if (!ensureUser()) {
+    const nextSession = nanoid(7);
+    const nextUser = ensureUser();
+    if (!nextUser) {
       return;
     }
-    window.location.hash = nanoid(7);
+    setStoredUser(nextUser, nextSession);
+    window.location.hash = nextSession;
   }, [ensureUser]);
 
   const onSubmitName = React.useCallback(
     event => {
       event.preventDefault();
       if (session) {
-        ensureUser();
+        const nextUser = ensureUser();
+        if (nextUser) {
+          setStoredUser(nextUser, session);
+        }
         return;
       }
 
@@ -87,7 +93,7 @@ export const Hero = () => {
   );
 
   const clearIdentity = React.useCallback(() => {
-    localStorage.removeItem('user');
+    clearStoredUser();
     setUser(undefined);
     setNameInput('');
   }, []);
