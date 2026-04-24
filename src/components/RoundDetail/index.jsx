@@ -1,23 +1,14 @@
 import React from 'react';
 import { SCORE_ICON_MAP } from '../../api/scores';
+import { scoreStats } from '../../utils/scoreStats';
 import * as styles from './rounddetail.module.css';
 
 export const RoundDetail = ({ round }) => {
   const scores = React.useMemo(() => round?.scores || [], [round]);
 
-  const numericScores = React.useMemo(
-    () => scores.filter(score => score.score >= 0).map(score => score.score),
+  const { numericScores, lowest, highest } = React.useMemo(
+    () => scoreStats(scores),
     [scores],
-  );
-
-  const lowest = React.useMemo(
-    () => (numericScores.length ? Math.min(...numericScores) : null),
-    [numericScores],
-  );
-
-  const highest = React.useMemo(
-    () => (numericScores.length ? Math.max(...numericScores) : null),
-    [numericScores],
   );
 
   const sortedScores = React.useMemo(

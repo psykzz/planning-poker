@@ -1,38 +1,12 @@
 import React from 'react';
 import * as styles from './userlist.module.css';
 import { SCORE_ICON_MAP } from '../../api/scores';
-
-const standardDeviation = array => {
-  const n = array.length;
-  if (!n) return NaN;
-  const mean = array.reduce((a, b) => a + b) / n;
-  return Math.sqrt(
-    array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n,
-  );
-};
-
-const average = arr => arr.reduce((p, c) => p + c, 0) / arr.length;
+import { scoreStats } from '../../utils/scoreStats';
 
 export const UserList = ({ me, users, scores, forceReveal = false }) => {
-  const numericScores = React.useMemo(
-    () => scores.filter(score => score.score >= 0).map(score => score.score),
+  const { numericScores, lowest, highest, avg, stddev } = React.useMemo(
+    () => scoreStats(scores),
     [scores],
-  );
-  const lowest = React.useMemo(
-    () => (numericScores.length ? Math.min(...numericScores) : null),
-    [numericScores],
-  );
-  const highest = React.useMemo(
-    () => (numericScores.length ? Math.max(...numericScores) : null),
-    [numericScores],
-  );
-  const stddev = React.useMemo(
-    () => (numericScores.length ? standardDeviation(numericScores) : null),
-    [numericScores],
-  );
-  const avg = React.useMemo(
-    () => (numericScores.length ? average(numericScores) : null),
-    [numericScores],
   );
   const scoreByUser = React.useMemo(() => {
     const byUser = {};

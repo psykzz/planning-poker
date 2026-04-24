@@ -1,5 +1,6 @@
 import React from 'react';
 import { POINT_SEQUENCES } from '../../hooks/useSessionState';
+import { useTheme } from '../../hooks/useTheme';
 import { submitOption } from '../../api/options';
 import { OPT_POINT_KEY } from '../../api/options';
 import { RoundsList } from '../RoundsList';
@@ -23,11 +24,10 @@ export const Sidebar = ({
   setSessionDisplayName,
   setUserName,
 }) => {
-  const storageKey = 'prefers-dark-mode';
+  const [themeMode, setThemeMode] = useTheme();
   const [activeTab, setActiveTab] = React.useState('rounds');
   const [userNameInput, setUserNameInput] = React.useState('');
   const [sessionNameInput, setSessionNameInput] = React.useState('');
-  const [themeMode, setThemeMode] = React.useState('dark');
 
   React.useEffect(() => {
     setSessionNameInput(sessionDisplayName);
@@ -36,29 +36,6 @@ export const Sidebar = ({
   React.useEffect(() => {
     setUserNameInput(user?.name || '');
   }, [user?.name]);
-
-  React.useEffect(() => {
-    const storedValue = window.localStorage.getItem(storageKey);
-    let shouldUseDarkmode = null;
-    if (storedValue !== null) {
-      shouldUseDarkmode = JSON.parse(storedValue);
-    }
-    if (typeof shouldUseDarkmode !== 'boolean') {
-      shouldUseDarkmode = window.matchMedia(
-        '(prefers-color-scheme: dark)',
-      ).matches;
-    }
-    setThemeMode(shouldUseDarkmode ? 'dark' : 'light');
-  }, []);
-
-  React.useEffect(() => {
-    const prefersDarkmode = themeMode === 'dark';
-    document.documentElement.setAttribute(
-      'data-theme',
-      prefersDarkmode ? 'dark' : 'light',
-    );
-    window.localStorage.setItem(storageKey, JSON.stringify(prefersDarkmode));
-  }, [themeMode]);
 
   const handleUserNameSave = React.useCallback(
     e => {

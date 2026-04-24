@@ -17,11 +17,12 @@ export const ResultsScreen = ({ session, user: localUser }) => {
   const { rounds, selectedRound, isViewingHistory, selectRound } =
     useRounds({ session });
 
+  const navigatingRef = React.useRef(false);
   React.useEffect(() => {
-    if (stage !== 'voting') {
+    if (stage !== 'voting' || navigatingRef.current) {
       return;
     }
-
+    navigatingRef.current = true;
     router.replace(`/voting#${session}`);
   }, [router, session, stage]);
 

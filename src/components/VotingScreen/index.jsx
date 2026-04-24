@@ -39,11 +39,12 @@ export const VotingScreen = ({ session, user: localUser }) => {
     }
   }, [clipboardState]);
 
+  const navigatingRef = React.useRef(false);
   React.useEffect(() => {
-    if (stage !== 'results') {
+    if (stage !== 'results' || navigatingRef.current) {
       return;
     }
-
+    navigatingRef.current = true;
     router.replace(`/results#${session}`);
   }, [router, session, stage]);
 

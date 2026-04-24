@@ -1,12 +1,12 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { POINT_SEQUENCES, useSessionState } from '../../hooks/useSessionState';
+import { useTheme } from '../../hooks/useTheme';
 import { submitOption } from '../../api/options';
 import { OPT_POINT_KEY } from '../../api/options';
 import * as styles from './optionsscreen.module.css';
 
 export const OptionsScreen = ({ session, user: localUser }) => {
-  const storageKey = 'prefers-dark-mode';
   const router = useRouter();
   const {
     user,
@@ -20,9 +20,9 @@ export const OptionsScreen = ({ session, user: localUser }) => {
     setUserName,
   } = useSessionState({ session, localUser });
 
+  const [themeMode, setThemeMode] = useTheme();
   const [userNameInput, setUserNameInput] = React.useState('');
   const [sessionNameInput, setSessionNameInput] = React.useState('');
-  const [themeMode, setThemeMode] = React.useState('dark');
 
   React.useEffect(() => {
     setSessionNameInput(sessionDisplayName);
@@ -31,29 +31,6 @@ export const OptionsScreen = ({ session, user: localUser }) => {
   React.useEffect(() => {
     setUserNameInput(user?.name || '');
   }, [user?.name]);
-
-  React.useEffect(() => {
-    const storedValue = window.localStorage.getItem(storageKey);
-    let shouldUseDarkmode = null;
-    if (storedValue !== null) {
-      shouldUseDarkmode = JSON.parse(storedValue);
-    }
-    if (typeof shouldUseDarkmode !== 'boolean') {
-      shouldUseDarkmode = window.matchMedia(
-        '(prefers-color-scheme: dark)',
-      ).matches;
-    }
-    setThemeMode(shouldUseDarkmode ? 'dark' : 'light');
-  }, []);
-
-  React.useEffect(() => {
-    const prefersDarkmode = themeMode === 'dark';
-    document.documentElement.setAttribute(
-      'data-theme',
-      prefersDarkmode ? 'dark' : 'light',
-    );
-    window.localStorage.setItem(storageKey, JSON.stringify(prefersDarkmode));
-  }, [themeMode]);
 
   const handleUserNameSave = React.useCallback(
     e => {
