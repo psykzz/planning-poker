@@ -15,8 +15,13 @@ const Options = () => {
     const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
     const hasUser = Boolean(storedUser?.id && storedUser?.name);
 
-    if (!hashSession || !hasUser) {
-      router.replace(hashSession ? `/#${hashSession}` : '/');
+    if (!hashSession) {
+      router.replace('/voting');
+      return;
+    }
+
+    if (!hasUser) {
+      router.replace(`/voting#${hashSession}`);
       return;
     }
 
