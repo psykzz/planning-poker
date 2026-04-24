@@ -2,31 +2,21 @@ import React from 'react';
 import { toast } from 'react-toastify';
 import { useCopyToClipboard } from 'react-use';
 import { useRouter } from 'next/router';
-import { ModeratorControls } from '../ModeratorControls';
 import { ScoreCards } from '../ScoreCards';
 import { UserList } from '../UserList';
-import { resetScores } from '../../api/scores';
 import { POINT_SEQUENCES, useSessionState } from '../../hooks/useSessionState';
 import * as styles from './votingscreen.module.css';
 
 export const VotingScreen = ({ session, user: localUser }) => {
   const router = useRouter();
-  const [isModerator, setIsModerator] = React.useState(false);
   const [clipboardState, copyToClipboard] = useCopyToClipboard();
-  const {
-    user,
-    users,
-    scores,
-    scoresLoaded,
-    confirmEnabled,
-    sequence,
-    showScores,
-    nextSequence,
-    toggleScores,
-    toggleConfirm,
-    cycleSequence,
-  } = useSessionState({ session, localUser });
+  const { user, users, scores, sequence, stage, isModerator, setStage } =
+    useSessionState({ session, localUser });
   const userScore = scores.find(score => score.user_id === user?.id);
+  const visibleScores = React.useMemo(
+    () => scores.filter(score => score.user_id === user?.id),
+    [scores, user?.id],
+  );
 
   React.useEffect(() => {
     if (clipboardState.value) {
@@ -35,12 +25,12 @@ export const VotingScreen = ({ session, user: localUser }) => {
   }, [clipboardState]);
 
   React.useEffect(() => {
-    if (!scoresLoaded || !showScores) {
+    if (stage !== 'results') {
       return;
     }
 
     router.replace(`/results#${session}`);
-  }, [router, scoresLoaded, session, showScores]);
+  }, [router, session, stage]);
 
   const copySessionId = React.useCallback(() => {
     copyToClipboard(
@@ -48,21 +38,9 @@ export const VotingScreen = ({ session, user: localUser }) => {
     );
   }, [copyToClipboard, session]);
 
-  const confirm = msg => {
-    if (!confirmEnabled) {
-      return true;
-    }
-    return window.confirm(msg);
-  };
-
   const goToResults = React.useCallback(() => {
-    if (!confirm('Reset votes and open results?')) {
-      return;
-    }
-    resetScores(session);
-    toggleScores(true);
-    router.replace(`/results#${session}`);
-  }, [router, session, confirmEnabled, toggleScores]);
+    setStage('results');
+  }, [setStage]);
 
   return (
     <section className={styles.screen}>
@@ -72,40 +50,36 @@ export const VotingScreen = ({ session, user: localUser }) => {
       </div>
 
       <div className={styles.actions}>
-        <button className={styles.copy} onClick={copySessionId}>
-          Copy session link
+        <button
+          className={styles.route}
+          onClick={() => router.push(`/options#${session}`)}
+        >
+          Options
         </button>
         <button
           className={styles.route}
-          disabled={!showScores && !isModerator}
+          disabled={!isModerator}
           onClick={goToResults}
           title={
-            !showScores && !isModerator
-              ? 'Enable moderator controls or reveal cards to open results'
-              : ''
+            !isModerator ? 'Become a moderator in Options to open results' : ''
           }
         >
           Open results
         </button>
       </div>
 
-      <UserList me={user} users={users} scores={scores} />
+      <UserList me={user} users={users} scores={visibleScores} />
+      <button
+        type="button"
+        className={styles.invite_line}
+        onClick={copySessionId}
+      >
+        invite new members +
+      </button>
       <ScoreCards
         session={session}
         options={POINT_SEQUENCES[sequence]}
         selectedScore={userScore?.score}
-      />
-      <ModeratorControls
-        {...{
-          session,
-          showScores,
-          toggleScores,
-          confirmEnabled,
-          toggleConfirm,
-          nextSequence,
-          cycleSequence,
-        }}
-        onModeratorChange={setIsModerator}
       />
     </section>
   );

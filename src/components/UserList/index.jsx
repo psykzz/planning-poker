@@ -13,7 +13,7 @@ const standardDeviation = array => {
 
 const average = arr => arr.reduce((p, c) => p + c, 0) / arr.length;
 
-export const UserList = ({ me, users, scores }) => {
+export const UserList = ({ me, users, scores, forceReveal = false }) => {
   const numericScores = React.useMemo(
     () => scores.filter(score => score.score >= 0).map(score => score.score),
     [scores],
@@ -42,7 +42,8 @@ export const UserList = ({ me, users, scores }) => {
     return byUser;
   }, [scores]);
 
-  const showScores = scores.length && scores.every(score => score.revealed);
+  const showScores =
+    forceReveal || (scores.length && scores.every(score => score.revealed));
 
   const sortedUsers = React.useMemo(() => {
     const ordered = [...(users || [])].sort((a, b) => a.id.localeCompare(b.id));
@@ -67,7 +68,7 @@ export const UserList = ({ me, users, scores }) => {
     if (!score) {
       return <div className={styles.score}>-</div>;
     }
-    if (!score.revealed && !isMe) {
+    if (!forceReveal && !score.revealed && !isMe) {
       return <div className={styles.score}>?</div>;
     }
     return (

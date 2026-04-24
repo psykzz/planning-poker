@@ -3,10 +3,10 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 import { useCopyToClipboard } from 'react-use';
-import { ModeratorControls } from '../ModeratorControls';
 import { ScoreCards } from '../ScoreCards';
 import { UserList } from '../UserList';
 import { POINT_SEQUENCES, useSessionState } from '../../hooks/useSessionState';
+import { resetScores } from '../../api/scores';
 import * as styles from './planningpoker.module.css';
 
 const CopySession = session => {
@@ -45,8 +45,8 @@ export const PlanningPoker = ({ session, user: localUser }) => {
     sequence,
     showScores,
     nextSequence,
+    isModerator,
     toggleScores,
-    toggleConfirm,
     cycleSequence,
   } = useSessionState({ session, localUser });
   const userScore = scores.find(score => score.user_id === user?.id);
@@ -73,17 +73,54 @@ export const PlanningPoker = ({ session, user: localUser }) => {
         options={POINT_SEQUENCES[sequence]}
         selectedScore={userScore?.score}
       />
-      <ModeratorControls
-        {...{
-          session,
-          showScores,
-          toggleScores,
-          confirmEnabled,
-          toggleConfirm,
-          nextSequence,
-          cycleSequence,
-        }}
-      />
+      {isModerator && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: '10px',
+            marginTop: '16px',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() =>
+              (!confirmEnabled ||
+                window.confirm(
+                  `${showScores ? 'Hide' : 'Reveal'} all cards?`,
+                )) &&
+              toggleScores(true)
+            }
+          >
+            {showScores ? 'Hide' : 'Reveal'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!confirmEnabled || window.confirm('Reset all scores?')) {
+                toggleScores(false);
+                resetScores(session);
+              }
+            }}
+          >
+            Reset
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                !confirmEnabled ||
+                window.confirm(`Switch to ${nextSequence} cards?`)
+              ) {
+                cycleSequence();
+              }
+            }}
+          >
+            Use {nextSequence} cards
+          </button>
+        </div>
+      )}
     </>
   );
 };

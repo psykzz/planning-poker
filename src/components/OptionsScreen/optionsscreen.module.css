@@ -1,0 +1,163 @@
+.screen {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.header h1 {
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
+  letter-spacing: -0.02em;
+}
+
+.header p {
+  color: var(--text-color-subtle);
+  margin-top: 8px;
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.setting {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 20px 24px;
+  background: var(--surface-accent);
+}
+
+.label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-color-subtle);
+}
+
+.hint {
+  font-size: 0.82rem;
+  color: var(--text-color-subtle);
+  margin-top: 8px;
+}
+
+/* Session name form */
+.inline_form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.text_input {
+  flex: 1;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.text_input:focus {
+  outline: 2px solid var(--color-discord-blue);
+  outline-offset: -2px;
+}
+
+.save_btn {
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save_btn:hover {
+  background: var(--bg-color-2);
+}
+
+/* Radio group */
+.radio_group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.radio_label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.radio_label input[type='radio'] {
+  accent-color: var(--color-discord-blue);
+  width: 16px;
+  height: 16px;
+}
+
+.radio_text {
+  font-weight: 600;
+}
+
+.radio_preview {
+  font-size: 0.82rem;
+  color: var(--text-color-subtle);
+}
+
+/* Toggle */
+.toggle_label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.toggle_label input[type='checkbox'] {
+  accent-color: var(--color-discord-blue);
+  width: 16px;
+  height: 16px;
+}
+
+/* Actions */
+.actions {
+  margin-top: 36px;
+  display: flex;
+  justify-content: center;
+}
+
+.back_btn {
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  background: var(--surface-accent);
+  border-radius: 12px;
+  padding: 0.6rem 1.1rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.back_btn:hover {
+  background: var(--bg-color-2);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 600px) {
+  .inline_form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .save_btn {
+    width: 100%;
+  }
+}

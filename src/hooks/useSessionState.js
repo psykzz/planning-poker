@@ -7,6 +7,10 @@ import {
   OPT_CONFIRM_KEY,
   OPT_POINT_SEQ_DEFAULT,
   OPT_POINT_KEY,
+  OPT_SESSION_NAME_KEY,
+  OPT_STAGE_KEY,
+  OPT_STAGE_DEFAULT,
+  moderatorKey,
 } from '../api/options';
 import { fetchScores, updateAllScores } from '../api/scores';
 import { createUser, fetchAllUsers, updateUserPresence } from '../api/users';
@@ -33,6 +37,9 @@ export const useSessionState = ({ session, localUser }) => {
     OPT_CONFIRM_DEFAULT === 'true',
   );
   const [sequence, setSequence] = React.useState(OPT_POINT_SEQ_DEFAULT);
+  const [isModerator, setIsModerator] = React.useState(false);
+  const [sessionDisplayName, setSessionDisplayNameState] = React.useState('');
+  const [stage, setStageState] = React.useState(null);
 
   const showScores = scores.length > 0 && scores.every(score => score.revealed);
   const nextSequence =
@@ -106,16 +113,48 @@ export const useSessionState = ({ session, localUser }) => {
     ]);
   }, []);
 
-  const updateSessionOptions = React.useCallback(async currentSession => {
-    if (!currentSession) return;
-    const pointSequence = await fetchOption(
-      currentSession,
-      OPT_POINT_KEY,
-      OPT_POINT_SEQ_DEFAULT,
-    );
-    setSequence(pointSequence);
-    // Confirm option is per-user, so not set for all users in session
-  }, []);
+  const updateSessionOptions = React.useCallback(
+    async (currentSession, currentUserId) => {
+      if (!currentSession) return;
+      const pointSequence = await fetchOption(
+        currentSession,
+        OPT_POINT_KEY,
+        OPT_POINT_SEQ_DEFAULT,
+      );
+      setSequence(pointSequence);
+
+      const confirm = await fetchOption(
+        currentSession,
+        OPT_CONFIRM_KEY,
+        OPT_CONFIRM_DEFAULT,
+      );
+      setConfirmEnabled(confirm === 'true');
+
+      const displayName = await fetchOption(
+        currentSession,
+        OPT_SESSION_NAME_KEY,
+        '',
+      );
+      setSessionDisplayNameState(displayName);
+
+      const currentStage = await fetchOption(
+        currentSession,
+        OPT_STAGE_KEY,
+        OPT_STAGE_DEFAULT,
+      );
+      setStageState(currentStage);
+
+      if (currentUserId) {
+        const modValue = await fetchOption(
+          currentSession,
+          moderatorKey(currentUserId),
+          'false',
+        );
+        setIsModerator(modValue === 'true');
+      }
+    },
+    [],
+  );
 
   React.useEffect(() => {
     if (!session) return;
@@ -134,21 +173,30 @@ export const useSessionState = ({ session, localUser }) => {
   React.useEffect(() => {
     if (!session) return;
     const subscriptionId = addSubscription(session, 'options', payload => {
-      switch (payload.new?.key) {
+      const key = payload.new?.key;
+      switch (key) {
         case OPT_CONFIRM_KEY:
           setConfirmEnabled(payload.new?.value === 'true');
           break;
         case OPT_POINT_KEY:
           setSequence(payload.new?.value || OPT_POINT_SEQ_DEFAULT);
           break;
+        case OPT_SESSION_NAME_KEY:
+          setSessionDisplayNameState(payload.new?.value || '');
+          break;
+        case OPT_STAGE_KEY:
+          setStageState(payload.new?.value || OPT_STAGE_DEFAULT);
+          break;
         default:
-          console.warn('Unknown option change', payload);
+          if (key?.startsWith('moderator:')) {
+            // Only update our own moderator status
+          }
           break;
       }
     });
-    updateSessionOptions(session);
+    updateSessionOptions(session, user?.id);
     return () => removeSubscription(subscriptionId);
-  }, [session, updateSessionOptions]);
+  }, [session, user?.id, updateSessionOptions]);
 
   React.useEffect(() => {
     getOrCreateUser(session, localUser);
@@ -188,14 +236,42 @@ export const useSessionState = ({ session, localUser }) => {
   );
 
   const toggleConfirm = React.useCallback(() => {
-    // Confirm option is per-user only, so set locally but not in the session database
-    setConfirmEnabled(current => !current);
-  }, []);
+    const next = !confirmEnabled;
+    setConfirmEnabled(next);
+    submitOption(session, OPT_CONFIRM_KEY, next.toString());
+  }, [session, confirmEnabled]);
 
   const cycleSequence = React.useCallback(() => {
     submitOption(session, OPT_POINT_KEY, nextSequence);
     setSequence(nextSequence);
   }, [session, nextSequence]);
+
+  const setModeratorStatus = React.useCallback(
+    value => {
+      if (!session || !user?.id) return;
+      setIsModerator(value);
+      submitOption(session, moderatorKey(user.id), value.toString());
+    },
+    [session, user?.id],
+  );
+
+  const setSessionDisplayName = React.useCallback(
+    name => {
+      if (!session) return;
+      setSessionDisplayNameState(name);
+      submitOption(session, OPT_SESSION_NAME_KEY, name);
+    },
+    [session],
+  );
+
+  const setStage = React.useCallback(
+    value => {
+      if (!session) return;
+      setStageState(value);
+      submitOption(session, OPT_STAGE_KEY, value);
+    },
+    [session],
+  );
 
   return {
     user,
@@ -206,8 +282,14 @@ export const useSessionState = ({ session, localUser }) => {
     sequence,
     showScores,
     nextSequence,
+    stage,
+    isModerator,
+    sessionDisplayName,
     toggleScores,
     toggleConfirm,
     cycleSequence,
+    setModeratorStatus,
+    setSessionDisplayName,
+    setStage,
   };
 };
