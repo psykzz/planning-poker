@@ -43,7 +43,7 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
   }, [scores]);
 
   const showScores =
-    forceReveal || (scores.length && scores.every(score => score.revealed));
+    forceReveal || (scores.length > 0 && scores.every(score => score.revealed));
 
   const sortedUsers = React.useMemo(() => {
     const ordered = [...(users || [])].sort((a, b) => a.id.localeCompare(b.id));
