@@ -3,47 +3,47 @@ import { submitScore, deleteScore, ICON_SCORE_MAP } from '../../api/scores';
 
 import * as styles from './scorecards.module.css';
 
-export const ScoreCards = ({ options, session }) => {
-  const onSelectCard = value => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user.id) return;
+export const ScoreCards = ({ options, session, selectedScore }) => {
+  const onSelectCard = React.useCallback(
+    value => {
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (!user?.id) return;
 
-    const deleteValue = '-';
-    if (value === deleteValue) {
-      deleteScore(session, user.id);
-    } else {
-      submitScore(session, user.id, ICON_SCORE_MAP[value] || value);
-    }
+      const deleteValue = '-';
+      const scoreValue = ICON_SCORE_MAP[value] || value;
 
-    const cardElements = document.querySelectorAll('[id^="score_val_"]');
-    cardElements.forEach(card => {
-      card.style.backgroundColor = '';
-      card.style.borderColor = '';
-    });
-
-    if (value !== deleteValue) {
-      const cardElement = document.getElementById(
-        `score_val_${ICON_SCORE_MAP[value] || value}`,
-      );
-      if (cardElement) {
-        cardElement.style.backgroundColor = 'var(--bg-color-2)';
-        cardElement.style.borderColor = 'var(--color-discord-blue)';
+      if (value === deleteValue) {
+        deleteScore(session, user.id);
+      } else {
+        submitScore(session, user.id, scoreValue);
       }
-    }
-  };
+    },
+    [session],
+  );
+
+  const isSelected = React.useCallback(
+    option => {
+      if (option === '-') {
+        return false;
+      }
+      return (ICON_SCORE_MAP[option] || option) === selectedScore;
+    },
+    [selectedScore],
+  );
 
   return (
     <div className={styles.card_container}>
-      <div className={styles.options}>
+      <div className={styles.options} role="group" aria-label="Score cards">
         {options.map(opt => (
-          <div
+          <button
+            type="button"
             key={`${ICON_SCORE_MAP[opt] || opt}`}
             id={`score_val_${ICON_SCORE_MAP[opt] || opt}`}
-            className={styles.card}
+            className={`${styles.card} ${isSelected(opt) ? styles.card_selected : ''}`}
             onClick={() => onSelectCard(opt)}
           >
             {opt}
-          </div>
+          </button>
         ))}
       </div>
     </div>

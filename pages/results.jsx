@@ -2,7 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '../src/components/Layout';
-import { PlanningPoker } from '../src/components/PlanningPoker';
+import { ResultsScreen } from '../src/components/ResultsScreen';
 
 const Results = () => {
   const router = useRouter();
@@ -16,7 +16,7 @@ const Results = () => {
     const hasUser = Boolean(storedUser?.id && storedUser?.name);
 
     if (!hashSession || !hasUser) {
-      router.replace('/');
+      router.replace(hashSession ? `/#${hashSession}` : '/');
       return;
     }
 
@@ -31,7 +31,7 @@ const Results = () => {
         <title>Results - Planning Poker</title>
       </Head>
       <Layout>
-        {ready ? <PlanningPoker session={session} user={user} /> : null}
+        {ready ? <ResultsScreen session={session} user={user} /> : null}
       </Layout>
     </>
   );

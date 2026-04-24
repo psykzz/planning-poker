@@ -28,6 +28,7 @@ export const useSessionState = ({ session, localUser }) => {
   const [user, setUser] = React.useState();
   const [users, setUsers] = React.useState([]);
   const [scores, setScores] = React.useState([]);
+  const [scoresLoaded, setScoresLoaded] = React.useState(false);
   const [confirmEnabled, setConfirmEnabled] = React.useState(
     OPT_CONFIRM_DEFAULT === 'true',
   );
@@ -82,6 +83,7 @@ export const useSessionState = ({ session, localUser }) => {
     if (!currentSession) return;
     const nextScores = await fetchScores(currentSession);
     setScores(nextScores);
+    setScoresLoaded(true);
   }, []);
 
   const updateScore = React.useCallback(payload => {
@@ -117,6 +119,7 @@ export const useSessionState = ({ session, localUser }) => {
 
   React.useEffect(() => {
     if (!session) return;
+    setScoresLoaded(false);
     const subscriptionId = addSubscription(session, 'scores', payload => {
       if (payload.eventType === 'DELETE') {
         removeScore(payload);
@@ -198,6 +201,7 @@ export const useSessionState = ({ session, localUser }) => {
     user,
     users,
     scores,
+    scoresLoaded,
     confirmEnabled,
     sequence,
     showScores,

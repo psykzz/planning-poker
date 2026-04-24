@@ -6,8 +6,10 @@ import { Footer } from '../Footer';
 import * as styles from './layout.module.css';
 
 const Layout = ({ children }) => (
-  <>
-    <div className={styles.container}>{children}</div>
+  <div className={styles.page_shell}>
+    <div className={styles.container}>
+      <main className={styles.main}>{children}</main>
+    </div>
     <Footer />
     <DarkmodeToggle />
     <ToastContainer
@@ -15,6 +17,6 @@ const Layout = ({ children }) => (
       pauseOnHover={false}
       position={'bottom-right'}
     />
-  </>
+  </div>
 );
 export default Layout;

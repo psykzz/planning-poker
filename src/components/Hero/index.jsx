@@ -6,6 +6,8 @@ import * as styles from './hero.module.css';
 export const Hero = () => {
   const [session, setSession] = React.useState('');
   const [user, setUser] = React.useState();
+  const [nameInput, setNameInput] = React.useState('');
+  const hasUser = Boolean(user?.id && user?.name);
 
   const normalizeUser = React.useCallback(storedUser => {
     if (!storedUser?.name) return;
@@ -15,28 +17,20 @@ export const Hero = () => {
     };
   }, []);
 
-  const onHashChange = () => {
+  const onHashChange = React.useCallback(() => {
     setSession(window.location.hash.slice(1));
-  };
+  }, []);
 
-  const createOrRestoreUser = () => {
+  const createOrRestoreUser = React.useCallback(() => {
     const storedUser = normalizeUser(JSON.parse(localStorage.getItem('user')));
     if (storedUser) {
       setUser(storedUser);
+      setNameInput(storedUser.name);
       return;
     }
 
-    let name = '';
-    while (name === '' || !name) {
-      name = prompt('Please enter your name');
-    }
-
-    setUser(
-      normalizeUser({
-        name,
-      }),
-    );
-  };
+    setUser(undefined);
+  }, [normalizeUser]);
 
   React.useEffect(() => {
     window.addEventListener('hashchange', onHashChange);
@@ -44,7 +38,7 @@ export const Hero = () => {
     createOrRestoreUser();
 
     return () => window.removeEventListener('hashchange', onHashChange);
-  }, [normalizeUser]);
+  }, [createOrRestoreUser, onHashChange]);
 
   React.useEffect(() => {
     if (!user?.id || !user?.name) {
@@ -54,22 +48,91 @@ export const Hero = () => {
     localStorage.setItem('user', JSON.stringify(user));
   }, [user]);
 
-  const createSession = () => {
+  const ensureUser = React.useCallback(() => {
+    if (user?.id && user?.name) {
+      return user;
+    }
+
+    const normalizedName = nameInput.trim();
+    if (!normalizedName) {
+      return null;
+    }
+
+    const nextUser = normalizeUser({ name: normalizedName });
+    setUser(nextUser);
+    return nextUser;
+  }, [nameInput, normalizeUser, user]);
+
+  const createSession = React.useCallback(() => {
     if (typeof window === 'undefined') {
       return;
     }
+    if (!ensureUser()) {
+      return;
+    }
     window.location.hash = nanoid(7);
-  };
+  }, [ensureUser]);
+
+  const onSubmitName = React.useCallback(
+    event => {
+      event.preventDefault();
+      if (session) {
+        ensureUser();
+        return;
+      }
+
+      createSession();
+    },
+    [createSession, ensureUser, session],
+  );
+
+  const clearIdentity = React.useCallback(() => {
+    localStorage.removeItem('user');
+    setUser(undefined);
+    setNameInput('');
+  }, []);
 
   return (
     <div className={`${styles.content} ${session ? styles.has_session : ''}`}>
-      <h1>Planning Poker</h1>
-      {!session ? (
-        <a onClick={createSession} className={styles.new_session}>
-          Start new session
-        </a>
+      <h1 className={styles.title}>Planning Poker</h1>
+      {!session || !hasUser ? (
+        <section className={styles.panel}>
+          <p className={styles.subtitle}>
+            {session
+              ? 'Enter your display name to join this session.'
+              : 'Create a session, share the link, and reveal estimates together.'}
+          </p>
+          <form onSubmit={onSubmitName} className={styles.form}>
+            <label htmlFor="player-name" className={styles.label}>
+              Your display name
+            </label>
+            <input
+              id="player-name"
+              className={styles.name_input}
+              value={nameInput}
+              onChange={event => setNameInput(event.target.value)}
+              placeholder="Enter your name"
+              autoComplete="name"
+              required
+            />
+            <div className={styles.actions}>
+              <button type="submit" className={styles.new_session}>
+                {session ? 'Join session' : 'Start new session'}
+              </button>
+              {hasUser ? (
+                <button
+                  type="button"
+                  className={styles.existing_session}
+                  onClick={clearIdentity}
+                >
+                  Switch identity
+                </button>
+              ) : null}
+            </div>
+          </form>
+        </section>
       ) : (
-        <PlanningPoker {...{ user, session }}></PlanningPoker>
+        <PlanningPoker {...{ user, session }} />
       )}
     </div>
   );
