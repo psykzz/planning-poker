@@ -1,37 +1,37 @@
-@import url(https://fonts.googleapis.com/css?family=Open+Sans:400,600,700&display=swap);
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
-  /*Primary colours*/
-  --bg-color: #f7f5eb;
-  --bg-color-2: #ebe9de;
-
-  --text-color: #333;
-  --text-color-subtle: #999;
-
-  /*Inverted colours*/
-  --inverted-bg-color: #333;
-  --inverted-text-color: #f7f5eb;
-
-  /*Fixed colours*/
-  --color-discord-blue: #7289da;
-  --color-warning-yellow: #dab936;
-  --color-warning-red: #f44336;
-
-  /*Fixed styles*/
+  --bg-color: #f6f7f3;
+  --bg-color-2: #ecefe4;
+  --surface-color: rgba(255, 255, 255, 0.76);
+  --surface-accent: rgba(255, 255, 255, 0.94);
+  --text-color: #17212d;
+  --text-color-subtle: #5f6b7a;
+  --inverted-bg-color: #15243a;
+  --inverted-text-color: #f6f7f3;
+  --color-discord-blue: #2c5fdb;
+  --color-warning-yellow: #d99f22;
+  --color-warning-red: #d94f3d;
+  --border-color: rgba(29, 50, 77, 0.18);
+  --shadow-soft: 0 10px 30px rgba(10, 35, 66, 0.12);
+  --shadow-strong: 0 18px 40px rgba(10, 35, 66, 0.2);
+  --radius-md: 14px;
+  --radius-lg: 20px;
   --display-mobile-breakpoint: 768px;
 }
 
 [data-theme='dark'] {
-  /*Primary colours*/
-  --bg-color: #333;
-  --bg-color-2: #404040;
-
-  --text-color: #f7f5eb;
-  --text-color-subtle: #999;
-
-  /*Inverted colours*/
-  --inverted-bg-color: #f7f5eb;
-  --inverted-text-color: #333;
+  --bg-color: #0f1724;
+  --bg-color-2: #182435;
+  --surface-color: rgba(22, 36, 55, 0.78);
+  --surface-accent: rgba(28, 46, 70, 0.9);
+  --text-color: #f6f8ff;
+  --text-color-subtle: #97a8c2;
+  --inverted-bg-color: #f6f8ff;
+  --inverted-text-color: #0f1724;
+  --border-color: rgba(151, 168, 194, 0.26);
+  --shadow-soft: 0 14px 32px rgba(0, 0, 0, 0.35);
+  --shadow-strong: 0 18px 42px rgba(0, 0, 0, 0.45);
 }
 
 * {
@@ -41,7 +41,25 @@
 }
 
 body {
-  font-family: 'Open Sans', Arial, sans-serif;
+  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
   color: var(--text-color);
-  background: var(--bg-color);
+  background:
+    radial-gradient(circle at 10% -15%, rgba(44, 95, 219, 0.18), transparent 38%),
+    radial-gradient(circle at 90% 0%, rgba(217, 159, 34, 0.12), transparent 42%),
+    linear-gradient(165deg, var(--bg-color) 0%, var(--bg-color-2) 100%);
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: none;
+  background: none;
+}
+
+a {
+  color: inherit;
 }

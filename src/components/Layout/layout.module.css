@@ -1,8 +1,31 @@
+.page_shell {
+    min-height: 100vh;
+    padding: 2rem 1rem 0.75rem;
+}
+
 .container {
     display: flex;
-    max-width: 1024px;
+    max-width: 1180px;
     width: 100%;
     margin: 0 auto;
-    justify-content: space-around;
-    flex-direction: column;
+    justify-content: center;
+}
+
+.main {
+    width: 100%;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(8px);
+}
+
+@media (max-width: 768px) {
+    .page_shell {
+        padding: 1rem 0.5rem 0.75rem;
+    }
+
+    .main {
+        border-radius: var(--radius-md);
+    }
 }
