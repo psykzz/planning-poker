@@ -23,9 +23,11 @@ export const Sidebar = ({
   setSessionDisplayName,
   setUserName,
 }) => {
+  const storageKey = 'prefers-dark-mode';
   const [activeTab, setActiveTab] = React.useState('rounds');
   const [userNameInput, setUserNameInput] = React.useState('');
   const [sessionNameInput, setSessionNameInput] = React.useState('');
+  const [themeMode, setThemeMode] = React.useState('dark');
 
   React.useEffect(() => {
     setSessionNameInput(sessionDisplayName);
@@ -34,6 +36,29 @@ export const Sidebar = ({
   React.useEffect(() => {
     setUserNameInput(user?.name || '');
   }, [user?.name]);
+
+  React.useEffect(() => {
+    const storedValue = window.localStorage.getItem(storageKey);
+    let shouldUseDarkmode = null;
+    if (storedValue !== null) {
+      shouldUseDarkmode = JSON.parse(storedValue);
+    }
+    if (typeof shouldUseDarkmode !== 'boolean') {
+      shouldUseDarkmode = window.matchMedia(
+        '(prefers-color-scheme: dark)',
+      ).matches;
+    }
+    setThemeMode(shouldUseDarkmode ? 'dark' : 'light');
+  }, []);
+
+  React.useEffect(() => {
+    const prefersDarkmode = themeMode === 'dark';
+    document.documentElement.setAttribute(
+      'data-theme',
+      prefersDarkmode ? 'dark' : 'light',
+    );
+    window.localStorage.setItem(storageKey, JSON.stringify(prefersDarkmode));
+  }, [themeMode]);
 
   const handleUserNameSave = React.useCallback(
     e => {
@@ -133,6 +158,32 @@ export const Sidebar = ({
                       Save
                     </button>
                   </form>
+                </div>
+
+                <div className={styles.setting}>
+                  <span className={styles.label}>Theme</span>
+                  <div className={styles.radio_group}>
+                    <label className={styles.radio_label}>
+                      <input
+                        type="radio"
+                        name="theme-sidebar"
+                        value="light"
+                        checked={themeMode === 'light'}
+                        onChange={e => setThemeMode(e.target.value)}
+                      />
+                      <span className={styles.radio_text}>Light</span>
+                    </label>
+                    <label className={styles.radio_label}>
+                      <input
+                        type="radio"
+                        name="theme-sidebar"
+                        value="dark"
+                        checked={themeMode === 'dark'}
+                        onChange={e => setThemeMode(e.target.value)}
+                      />
+                      <span className={styles.radio_text}>Dark</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div className={styles.divider}>
