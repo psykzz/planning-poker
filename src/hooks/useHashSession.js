@@ -18,13 +18,14 @@ export const useHashSession = (fallbackPath = '/voting') => {
 
   React.useEffect(() => {
     const hashSession = window.location.hash.slice(1);
-    const storedUser = getStoredUser();
-    const hasUser = Boolean(storedUser?.id && storedUser?.name);
 
     if (!hashSession) {
       router.replace(fallbackPath);
       return;
     }
+
+    const storedUser = getStoredUser(hashSession);
+    const hasUser = Boolean(storedUser?.id && storedUser?.name);
 
     if (!hasUser) {
       router.replace(`/voting#${hashSession}`);

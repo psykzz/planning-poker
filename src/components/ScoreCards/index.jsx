@@ -8,7 +8,7 @@ import * as styles from './scorecards.module.css';
 export const ScoreCards = ({ options, session, selectedScore }) => {
   const onSelectCard = React.useCallback(
     async value => {
-      const user = getStoredUser();
+      const user = getStoredUser(session);
       if (!user?.id) return;
 
       const deleteValue = '-';

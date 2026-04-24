@@ -1,5 +1,6 @@
 import React from 'react';
 import { addSubscription, removeSubscription } from '../api/client';
+import { setStoredUser } from '../utils/userStorage';
 import {
   fetchOption,
   submitOption,
@@ -64,8 +65,7 @@ export const useSessionState = ({ session, localUser }) => {
     const cutoffTimestamp = Date.now() - afkSeconds * 1000;
     const activeUsers = allUsers.filter(
       currentUser =>
-        parseISOString(currentUser.last_presence).getTime() >
-        cutoffTimestamp,
+        parseISOString(currentUser.last_presence).getTime() > cutoffTimestamp,
     );
     setUsers(activeUsers);
   }, []);
@@ -248,8 +248,8 @@ export const useSessionState = ({ session, localUser }) => {
   React.useEffect(() => {
     updateUsers(session);
 
-    if (user?.id) {
-      localStorage.setItem('user', JSON.stringify(user));
+    if (session && user?.id) {
+      setStoredUser(user, session);
     }
   }, [session, user, updateUsers]);
 

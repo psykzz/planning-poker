@@ -5,6 +5,7 @@ import * as styles from './hero.module.css';
 import {
   clearStoredUser,
   getStoredUser,
+  getStoredUserName,
   normalizeStoredUser,
   setStoredUser,
 } from '../../utils/userStorage';
@@ -16,11 +17,12 @@ export const Hero = () => {
   const hasUser = Boolean(user?.id && user?.name);
 
   const onHashChange = React.useCallback(() => {
-    setSession(window.location.hash.slice(1));
-  }, []);
+    const nextSession = window.location.hash.slice(1);
+    const storedUser = nextSession ? getStoredUser(nextSession) : undefined;
+    const storedName = getStoredUserName();
 
-  const createOrRestoreUser = React.useCallback(() => {
-    const storedUser = getStoredUser();
+    setSession(nextSession);
+
     if (storedUser) {
       setUser(storedUser);
       setNameInput(storedUser.name);
@@ -28,23 +30,23 @@ export const Hero = () => {
     }
 
     setUser(undefined);
+    setNameInput(storedName || '');
   }, []);
 
   React.useEffect(() => {
     window.addEventListener('hashchange', onHashChange);
     onHashChange();
-    createOrRestoreUser();
 
     return () => window.removeEventListener('hashchange', onHashChange);
-  }, [createOrRestoreUser, onHashChange]);
+  }, [onHashChange]);
 
   React.useEffect(() => {
-    if (!user?.id || !user?.name) {
+    if (!user?.id || !user?.name || !session) {
       return;
     }
 
-    setStoredUser(user);
-  }, [user]);
+    setStoredUser(user, session);
+  }, [session, user]);
 
   const ensureUser = React.useCallback(() => {
     if (user?.id && user?.name) {
@@ -65,17 +67,23 @@ export const Hero = () => {
     if (typeof window === 'undefined') {
       return;
     }
-    if (!ensureUser()) {
+    const nextSession = nanoid(7);
+    const nextUser = ensureUser();
+    if (!nextUser) {
       return;
     }
-    window.location.hash = nanoid(7);
+    setStoredUser(nextUser, nextSession);
+    window.location.hash = nextSession;
   }, [ensureUser]);
 
   const onSubmitName = React.useCallback(
     event => {
       event.preventDefault();
       if (session) {
-        ensureUser();
+        const nextUser = ensureUser();
+        if (nextUser) {
+          setStoredUser(nextUser, session);
+        }
         return;
       }
 
