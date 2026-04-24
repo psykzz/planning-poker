@@ -1,8 +1,16 @@
+.container {
+  display: flex;
+  height: 100vh;
+}
+
 .screen {
+  flex: 1;
+  min-width: 0;
   width: 100%;
-  max-width: 1080px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   padding: 28px 20px 40px;
+  overflow-y: auto;
 }
 
 .header {

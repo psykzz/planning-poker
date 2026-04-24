@@ -1,0 +1,66 @@
+.round_detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.scores_list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.score_item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-color);
+}
+
+.user_name {
+  font-weight: 500;
+  color: var(--text-color);
+  flex: 1;
+}
+
+.score_value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-discord-blue);
+  min-width: 40px;
+  text-align: center;
+}
+
+.stats {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border-color);
+  margin-top: 4px;
+}
+
+.stat {
+  display: flex;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.label {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.value {
+  color: var(--color-discord-blue);
+}
+
+.empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-color);
+  opacity: 0.6;
+}

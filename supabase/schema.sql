@@ -4,6 +4,7 @@
 create extension if not exists pgcrypto;
 
 -- Drop dependent objects first so the script can fully recreate the schema.
+drop table if exists public.rounds;
 drop table if exists public.scores;
 drop table if exists public.options;
 drop table if exists public.users;
@@ -48,10 +49,20 @@ create table public.scores (
   primary key (session_name, user_id)
 );
 
+create table public.rounds (
+  id uuid primary key default gen_random_uuid(),
+  session_name text not null,
+  scores jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 create index users_session_name_idx on public.users (session_name);
 create index users_last_presence_idx on public.users (last_presence desc);
 create index scores_session_name_idx on public.scores (session_name);
 create index scores_revealed_idx on public.scores (session_name, revealed);
+create index rounds_session_name_idx on public.rounds (session_name);
+create index rounds_created_at_idx on public.rounds (session_name, created_at desc);
 
 create trigger users_set_updated_at
 before update on public.users
@@ -65,6 +76,11 @@ execute function public.set_updated_at();
 
 create trigger scores_set_updated_at
 before update on public.scores
+for each row
+execute function public.set_updated_at();
+
+create trigger rounds_set_updated_at
+before update on public.rounds
 for each row
 execute function public.set_updated_at();
 
@@ -135,5 +151,26 @@ for delete
 to anon, authenticated
 using (true);
 
+alter table public.rounds enable row level security;
+
+create policy "rounds are readable by anyone"
+on public.rounds
+for select
+to anon, authenticated
+using (true);
+
+create policy "rounds are writable by anyone"
+on public.rounds
+for insert
+to anon, authenticated
+with check (true);
+
+create policy "rounds are deletable by anyone"
+on public.rounds
+for delete
+to anon, authenticated
+using (true);
+
 alter publication supabase_realtime add table public.options;
 alter publication supabase_realtime add table public.scores;
+alter publication supabase_realtime add table public.rounds;

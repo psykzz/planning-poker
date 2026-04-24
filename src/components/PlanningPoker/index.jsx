@@ -6,7 +6,7 @@ import { useCopyToClipboard } from 'react-use';
 import { ScoreCards } from '../ScoreCards';
 import { UserList } from '../UserList';
 import { POINT_SEQUENCES, useSessionState } from '../../hooks/useSessionState';
-import { resetScores } from '../../api/scores';
+import { resetScoresWithRound } from '../../api/rounds';
 import * as styles from './planningpoker.module.css';
 
 const CopySession = session => {
@@ -100,7 +100,7 @@ export const PlanningPoker = ({ session, user: localUser }) => {
             onClick={() => {
               if (!confirmEnabled || window.confirm('Reset all scores?')) {
                 toggleScores(false);
-                resetScores(session);
+                resetScoresWithRound(session, scores, users);
               }
             }}
           >

@@ -73,12 +73,16 @@ export const useSessionState = ({ session, localUser }) => {
   const updatePresence = React.useCallback(
     async (currentSession, currentUser) => {
       if (!currentSession || !currentUser?.id) return;
-      await updateUserPresence(
-        currentSession,
-        currentUser.id,
-        new Date().toISOString(),
-      );
-      await updateUsers(currentSession);
+      try {
+        await updateUserPresence(
+          currentSession,
+          currentUser.id,
+          new Date().toISOString(),
+        );
+        await updateUsers(currentSession);
+      } catch (error) {
+        console.warn('Failed to update presence', error);
+      }
     },
     [updateUsers],
   );

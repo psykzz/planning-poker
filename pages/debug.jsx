@@ -2,6 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import { fetchAllUsers } from '../src/api/users';
 import { fetchScores } from '../src/api/scores';
+import { fetchRounds } from '../src/api/rounds';
 import { supabase } from '../src/api/client';
 
 const Section = ({ title, data }) => (
@@ -37,6 +38,7 @@ const Debug = () => {
   const [users, setUsers] = React.useState(null);
   const [scores, setScores] = React.useState(null);
   const [options, setOptions] = React.useState(null);
+  const [rounds, setRounds] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
 
@@ -55,7 +57,7 @@ const Debug = () => {
 
     const load = async () => {
       try {
-        const [allUsers, allScores, allOptions] = await Promise.all([
+        const [allUsers, allScores, allOptions, allRounds] = await Promise.all([
           fetchAllUsers(hashSession),
           fetchScores(hashSession),
           supabase
@@ -66,10 +68,12 @@ const Debug = () => {
               if (e) throw new Error(JSON.stringify(e));
               return data;
             }),
+          fetchRounds(hashSession),
         ]);
         setUsers(allUsers);
         setScores(allScores);
         setOptions(allOptions);
+        setRounds(allRounds);
       } catch (e) {
         setError(e.message);
       } finally {
@@ -110,6 +114,7 @@ const Debug = () => {
               title={`Options (${options?.length ?? 0})`}
               data={options}
             />
+            <Section title={`Rounds (${rounds?.length ?? 0})`} data={rounds} />
           </>
         )}
       </div>
