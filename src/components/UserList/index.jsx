@@ -63,10 +63,10 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
   const showScores =
     forceReveal || (scores.length > 0 && scores.every(score => score.revealed));
 
-  const sortedUsers = React.useMemo(() => {
+  const { votingUsers, spectatorUsers } = React.useMemo(() => {
     const ordered = [...(users || [])].sort((a, b) => a.id.localeCompare(b.id));
     if (showScores) {
-      return ordered.sort((a, b) => {
+      ordered.sort((a, b) => {
         if (a.is_spectator !== b.is_spectator) {
           return a.is_spectator ? 1 : -1;
         }
@@ -75,7 +75,10 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
         );
       });
     }
-    return ordered;
+    return {
+      votingUsers: ordered.filter(u => !u.is_spectator),
+      spectatorUsers: ordered.filter(u => u.is_spectator),
+    };
   }, [users, showScores, scoreByUser]);
 
   const Score = ({ isMe, score }) => {
@@ -95,7 +98,6 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
   const User = ({ user }) => {
     const isMe = user.id === me?.id;
     const score = scoreByUser[user.id];
-    const isSpectator = Boolean(user.is_spectator);
     const hasSubmittedScore = !!score;
     return (
       <li
@@ -105,7 +107,6 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
         <div className={`${styles.name} ${isMe ? styles.me : ''}`}>
           {user.name}
           {isMe ? ' (You)' : ''}
-          {isSpectator ? ' (Spectator)' : ''}
         </div>
         <div className={`${styles.card} ${styles.no_hover}`}>
           <Score {...{ isMe, score }} />
@@ -117,11 +118,22 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
   return (
     <section
       className={`${styles.user_list} ${
-        sortedUsers?.length > 5 && styles.two_columns
+        votingUsers?.length > 5 && styles.two_columns
       } ${showScores && styles.show_scores}`}
     >
+      {spectatorUsers.length > 0 && (
+        <p className={styles.spectators_line}>
+          <span className={styles.spectators_label}>Spectators:</span>{' '}
+          {spectatorUsers.map((u, i) => (
+            <span key={u.id}>
+              {u.id === me?.id ? <strong>{u.name} (You)</strong> : u.name}
+              {i < spectatorUsers.length - 1 ? ', ' : ''}
+            </span>
+          ))}
+        </p>
+      )}
       <ul className={styles.users}>
-        {sortedUsers?.map(user => (
+        {votingUsers?.map(user => (
           <User key={user.id} user={user} />
         ))}
       </ul>

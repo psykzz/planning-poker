@@ -69,6 +69,15 @@ export const VotingScreen = ({ session, user: localUser }) => {
     }
   }, [setSpectatorStatus]);
 
+  const stopSpectating = React.useCallback(async () => {
+    try {
+      await setSpectatorStatus(false);
+    } catch (error) {
+      toast.error('Could not leave spectator mode. Please try again.');
+      console.warn('Failed to switch spectator status', error);
+    }
+  }, [setSpectatorStatus]);
+
   return (
     <div className={styles.container}>
       <button
@@ -137,7 +146,14 @@ export const VotingScreen = ({ session, user: localUser }) => {
           <div className={styles.sticky_cards}>
             {isSpectator ? (
               <p className={styles.spectator_hint}>
-                Spectator mode is enabled. Switch it off in Options to vote.
+                Spectator mode is enabled.{' '}
+                <button
+                  type="button"
+                  className={styles.spectator_stop_link}
+                  onClick={stopSpectating}
+                >
+                  Stop spectating
+                </button>
               </p>
             ) : (
               <ScoreCards

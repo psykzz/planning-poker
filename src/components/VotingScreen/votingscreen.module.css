@@ -37,7 +37,22 @@
   margin: 0;
   text-align: center;
   color: var(--text-color-subtle);
-  font-weight: 600;
+}
+
+.spectator_stop_link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-color-subtle);
+  font-size: 0.82rem;
+  line-height: 1.2;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.spectator_stop_link:hover {
+  color: var(--text-color);
 }
 
 .header h1 {

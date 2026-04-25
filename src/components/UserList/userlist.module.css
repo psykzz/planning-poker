@@ -53,6 +53,17 @@
   }
 }
 
+.spectators_line {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--text-color-subtle);
+}
+
+.spectators_label {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
 .averages {
   width: 100%;
   margin: 1rem 0 0 0;
