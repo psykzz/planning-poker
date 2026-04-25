@@ -18,7 +18,10 @@
 }
 
 .badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  line-height: 1;
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -29,6 +32,19 @@
   border-radius: 99px;
   padding: 0.3rem 0.85rem;
   margin-bottom: 1.25rem;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.badge:hover {
+  background: color-mix(in srgb, var(--color-discord-blue), transparent 78%);
+}
+
+.badge_icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+  display: block;
 }
 
 .title {
