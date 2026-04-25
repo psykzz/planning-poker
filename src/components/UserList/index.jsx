@@ -26,6 +26,32 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
     [scoringUserScores],
   );
 
+  const { highestUsers, lowestUsers } = React.useMemo(() => {
+    if (!numericScores.length || highest == null || lowest == null) {
+      return { highestUsers: [], lowestUsers: [] };
+    }
+
+    const numericUserScores = scoringUserScores.filter(
+      score => score.score >= 0,
+    );
+    const getNamesForValue = value =>
+      numericUserScores
+        .filter(score => score.score === value)
+        .map(score => userById[score.user_id]?.name || 'Unknown')
+        .filter((name, index, names) => names.indexOf(name) === index);
+
+    return {
+      highestUsers: getNamesForValue(highest),
+      lowestUsers: getNamesForValue(lowest),
+    };
+  }, [numericScores.length, highest, lowest, scoringUserScores, userById]);
+
+  const formatSummaryStat = (value, names) => {
+    if (value == null) return '-';
+    if (!names?.length) return value;
+    return `${value} (${names.join(', ')})`;
+  };
+
   const scoreByUser = React.useMemo(() => {
     const byUser = {};
     scores?.forEach(score => {
@@ -103,8 +129,8 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
       {!!showScores && (
         <aside className={styles.averages}>
           <h3>Score Averages</h3>
-          <div>Highest: {highest ?? '-'}</div>
-          <div>Lowest: {lowest ?? '-'}</div>
+          <div>Highest: {formatSummaryStat(highest, highestUsers)}</div>
+          <div>Lowest: {formatSummaryStat(lowest, lowestUsers)}</div>
           <div>Std Dev: {stddev?.toFixed ? stddev.toFixed(2) : '-'}</div>
           <div>Average: {avg?.toFixed ? avg.toFixed(2) : '-'}</div>
         </aside>
