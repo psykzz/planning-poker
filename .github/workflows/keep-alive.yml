@@ -1,0 +1,52 @@
+name: Keep Alive
+
+# Runs on a schedule to keep Supabase active and validate the live deployment.
+# Supabase free-tier projects pause after 7 days of inactivity; this workflow
+# exercises the app every 3 days, acting as both a keep-alive ping and an E2E
+# smoke test.
+#
+# Required repository secret:
+#   LIVE_URL  – the base URL of the deployed app (e.g. https://your-app.netlify.app)
+
+on:
+  schedule:
+    # 08:00 UTC every 3 days (days 1, 4, 7, ... of each month)
+    - cron: '0 8 */3 * *'
+
+  # Allow triggering manually from the Actions tab at any time
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: E2E smoke tests (keep-alive)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          LIVE_URL: ${{ secrets.LIVE_URL }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
