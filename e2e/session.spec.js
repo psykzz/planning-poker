@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { nanoid } from 'nanoid';
 
 // The sidebar menu button and close button are only shown on mobile viewports
 // (display: none on desktop via CSS media query max-width: 768px).
@@ -35,10 +36,11 @@ test('full voting session flow: join → vote → open results → back to votin
 
   // ── Step 2: Join the session with a display name ──────────────────────────
   const nameInput = page.locator('#player-name');
+  const playerName = `e2e-${nanoid(8)}`;
   await logLocatorState(nameInput, 'name input before wait');
   await nameInput.waitFor({ state: 'visible' });
-  await nameInput.fill('E2E Bot');
-  log('Filled player name');
+  await nameInput.fill(playerName);
+  log('Filled player name', { playerName });
   await page.getByRole('button', { name: 'Join session' }).click();
   log('Clicked join session');
 
@@ -68,12 +70,15 @@ test('full voting session flow: join → vote → open results → back to votin
     .filter({ hasText: /not a moderator|you are a moderator/i })
     .locator('input[type="checkbox"]');
   await logLocatorState(moderatorToggle, 'moderator toggle');
+  await expect(moderatorToggle).toBeVisible({ timeout: 10000 });
   if (!(await moderatorToggle.isChecked())) {
     log('Moderator toggle is unchecked, clicking');
     await moderatorToggle.click();
   } else {
     log('Moderator toggle already checked');
   }
+  await expect(moderatorToggle).toBeChecked({ timeout: 10000 });
+  log('Moderator toggle confirmed checked');
 
   const closeSidebarButton = page.getByRole('button', {
     name: 'Close sidebar',
