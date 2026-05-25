@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+// The sidebar menu button and close button are only shown on mobile viewports
+// (display: none on desktop via CSS media query max-width: 768px).
+test.use({ viewport: { width: 390, height: 844 } });
+
 // Fixed session ID so repeated runs reuse the same Supabase rows and keep the
 // project active without accumulating unlimited throwaway data.
 const SESSION_ID = 'e2e-keep-alive';
