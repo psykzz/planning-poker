@@ -5,10 +5,6 @@ import { nanoid } from 'nanoid';
 // (display: none on desktop via CSS media query max-width: 768px).
 test.use({ viewport: { width: 390, height: 844 } });
 
-// Fixed session ID so repeated runs reuse the same Supabase rows and keep the
-// project active without accumulating unlimited throwaway data.
-const SESSION_ID = 'e2e-keep-alive';
-
 const log = (...args) => {
   console.log('[e2e:session]', ...args);
 };
@@ -21,6 +17,8 @@ async function logLocatorState(locator, name) {
 }
 
 test('full voting session flow: join → vote → open results → back to voting', async ({ page }) => {
+  const sessionId = `e2e-${nanoid(10)}`;
+
   // Auto-accept any native confirm() dialogs (e.g. the reset-scores prompt).
   page.on('dialog', dialog => dialog.accept());
   page.on('console', msg => log(`[browser:${msg.type()}] ${msg.text()}`));
@@ -28,10 +26,10 @@ test('full voting session flow: join → vote → open results → back to votin
   page.on('requestfailed', request =>
     log('[requestfailed]', request.method(), request.url(), request.failure()?.errorText ?? 'unknown'),
   );
-  log('Starting session flow', { sessionId: SESSION_ID });
+  log('Starting session flow', { sessionId });
 
   // ── Step 1: Navigate to a voting session ──────────────────────────────────
-  await page.goto(`/voting#${SESSION_ID}`);
+  await page.goto(`/voting#${sessionId}`);
   log('Navigated', { url: page.url() });
 
   // ── Step 2: Join the session with a display name ──────────────────────────
@@ -114,7 +112,7 @@ test('full voting session flow: join → vote → open results → back to votin
     .toMatch(/^\/results\/?$/);
   await expect
     .poll(() => new URL(page.url()).hash)
-    .toBe(`#${SESSION_ID}`);
+    .toBe(`#${sessionId}`);
   await expect(page.getByRole('heading', { level: 1, name: /Results/i })).toBeVisible({ timeout: 10000 });
   log('Results page visible', { url: page.url() });
 
@@ -127,7 +125,7 @@ test('full voting session flow: join → vote → open results → back to votin
     .toMatch(/^\/voting\/?$/);
   await expect
     .poll(() => new URL(page.url()).hash)
-    .toBe(`#${SESSION_ID}`);
+    .toBe(`#${sessionId}`);
   await expect(page.getByRole('heading', { level: 1, name: /Voting/i })).toBeVisible({ timeout: 10000 });
   log('Returned to voting page', { url: page.url() });
 });
