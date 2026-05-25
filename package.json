@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "test:e2e": "playwright test",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
   },
   "dependencies": {
@@ -22,6 +22,7 @@
     "react-use": "^17.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.4",
     "prettier": "^3.8.3"
