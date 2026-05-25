@@ -51,8 +51,9 @@ test('full voting session flow: join → vote → open results → back to votin
   }
 
   // ── Step 5: Cast a vote ───────────────────────────────────────────────────
-  const openResultsButton = page.getByRole('button', { name: 'Open results' });
-  await expect(openResultsButton).toBeEnabled({ timeout: 10000 });
+  await expect(page.getByRole('button', { name: 'Open results' })).toBeEnabled({
+    timeout: 10000,
+  });
 
   const scoreGroup = page.getByRole('group', { name: 'Score cards' });
   await scoreGroup.waitFor({ state: 'visible', timeout: 10000 });
@@ -60,15 +61,26 @@ test('full voting session flow: join → vote → open results → back to votin
   await scoreGroup.getByRole('button', { name: '3' }).first().click();
 
   // ── Step 6: Open results (moderator action) ───────────────────────────────
+  const openResultsButton = page.getByRole('button', { name: 'Open results' });
   await openResultsButton.click();
 
   // Results page loads (router.replace navigates to /results#...)
-  await expect(page).toHaveURL(new RegExp(`/results/?#${SESSION_ID}$`));
+  await expect
+    .poll(() => new URL(page.url()).pathname)
+    .toMatch(/^\/results\/?$/);
+  await expect
+    .poll(() => new URL(page.url()).hash)
+    .toBe(`#${SESSION_ID}`);
   await expect(page.getByRole('heading', { level: 1, name: /Results/i })).toBeVisible({ timeout: 10000 });
 
   // ── Step 7: Reset back to voting ─────────────────────────────────────────
   await page.getByRole('button', { name: 'Back to voting' }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/voting/?#${SESSION_ID}$`));
+  await expect
+    .poll(() => new URL(page.url()).pathname)
+    .toMatch(/^\/voting\/?$/);
+  await expect
+    .poll(() => new URL(page.url()).hash)
+    .toBe(`#${SESSION_ID}`);
   await expect(page.getByRole('heading', { level: 1, name: /Voting/i })).toBeVisible({ timeout: 10000 });
 });
