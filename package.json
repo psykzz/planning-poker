@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "test:e2e": "playwright test",
+    "lint": "next lint",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
   },
   "dependencies": {
