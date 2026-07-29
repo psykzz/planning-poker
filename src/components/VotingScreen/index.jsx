@@ -1,12 +1,12 @@
 import React from 'react';
 import { toast } from 'react-toastify';
-import { useCopyToClipboard } from 'react-use';
 import { useRouter } from 'next/router';
 import { ScoreCards } from '../ScoreCards';
 import { UserList } from '../UserList';
 import { Sidebar } from '../Sidebar';
 import { POINT_SEQUENCES, useSessionState } from '../../hooks/useSessionState';
 import { useRounds } from '../../hooks/useRounds';
+import { useCopyToClipboard } from '../../utils/useCopyToClipboard';
 import * as styles from './votingscreen.module.css';
 
 export const VotingScreen = ({ session, user: localUser }) => {
