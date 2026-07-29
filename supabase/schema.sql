@@ -178,3 +178,4 @@ using (true);
 alter publication supabase_realtime add table public.options;
 alter publication supabase_realtime add table public.scores;
 alter publication supabase_realtime add table public.rounds;
+alter publication supabase_realtime add table public.users;
