@@ -101,12 +101,11 @@ export const useSessionState = ({ session, localUser }) => {
           currentUser.id,
           new Date().toISOString(),
         );
-        await updateUsers(currentSession);
       } catch (error) {
         console.warn('Failed to update presence', error);
       }
     },
-    [updateUsers],
+    [],
   );
 
   const getOrCreateUser = React.useCallback(
