@@ -16,3 +16,9 @@ test('landing page shows how-it-works steps', async ({ page }) => {
   await expect(page.getByText('Everyone joins')).toBeVisible();
   await expect(page.getByText('Vote and reveal')).toBeVisible();
 });
+
+test('SSR test page is not available', async ({ page }) => {
+  const response = await page.goto('/ssr');
+
+  expect(response?.status()).toBe(404);
+});
