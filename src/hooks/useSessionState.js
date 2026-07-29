@@ -56,6 +56,7 @@ export const useSessionState = ({ session, localUser }) => {
   const scoresRequestRef = React.useRef(0);
   const optionsRequestRef = React.useRef(0);
   const userRequestRef = React.useRef(0);
+  const legacyModeratorCheckRef = React.useRef(null);
 
   React.useEffect(() => {
     sessionRef.current = session;
@@ -184,11 +185,33 @@ export const useSessionState = ({ session, localUser }) => {
         return;
       }
 
-      const legacyModValue = await fetchOption(
-        currentSession,
-        moderatorKey(currentUserId),
-        'false',
-      );
+      const legacyCheck = legacyModeratorCheckRef.current;
+      let legacyModValue;
+      if (
+        legacyCheck?.session === currentSession &&
+        legacyCheck.userId === currentUserId
+      ) {
+        legacyModValue = await legacyCheck.promise;
+      } else {
+        const legacyPromise = fetchOption(
+          currentSession,
+          moderatorKey(currentUserId),
+          'false',
+        );
+        legacyModeratorCheckRef.current = {
+          session: currentSession,
+          userId: currentUserId,
+          promise: legacyPromise,
+        };
+        try {
+          legacyModValue = await legacyPromise;
+        } catch (error) {
+          if (legacyModeratorCheckRef.current?.promise === legacyPromise) {
+            legacyModeratorCheckRef.current = null;
+          }
+          throw error;
+        }
+      }
 
       if (
         sessionRef.current !== currentSession ||
