@@ -3,6 +3,7 @@ import { addSubscription, removeSubscription } from '../api/client';
 import { setStoredUser } from '../utils/userStorage';
 import {
   fetchOption,
+  fetchOptions,
   submitOption,
   OPT_CONFIRM_DEFAULT,
   OPT_CONFIRM_KEY,
@@ -146,19 +147,23 @@ export const useSessionState = ({ session, localUser }) => {
     async (currentSession, currentUserId) => {
       if (!currentSession) return;
       const requestId = ++optionsRequestRef.current;
-      const [
-        pointSequence,
-        confirm,
-        displayName,
-        currentStage,
-        moderatorsValue,
-      ] = await Promise.all([
-        fetchOption(currentSession, OPT_POINT_KEY, OPT_POINT_SEQ_DEFAULT),
-        fetchOption(currentSession, OPT_CONFIRM_KEY, OPT_CONFIRM_DEFAULT),
-        fetchOption(currentSession, OPT_SESSION_NAME_KEY, ''),
-        fetchOption(currentSession, OPT_STAGE_KEY, OPT_STAGE_DEFAULT),
-        fetchOption(currentSession, OPT_MODERATORS_KEY, ''),
+      const legacyModeratorKey = currentUserId
+        ? moderatorKey(currentUserId)
+        : null;
+      const options = await fetchOptions(currentSession, [
+        OPT_POINT_KEY,
+        OPT_CONFIRM_KEY,
+        OPT_SESSION_NAME_KEY,
+        OPT_STAGE_KEY,
+        OPT_MODERATORS_KEY,
+        ...(legacyModeratorKey ? [legacyModeratorKey] : []),
       ]);
+      const pointSequence =
+        options[OPT_POINT_KEY] ?? OPT_POINT_SEQ_DEFAULT;
+      const confirm = options[OPT_CONFIRM_KEY] ?? OPT_CONFIRM_DEFAULT;
+      const displayName = options[OPT_SESSION_NAME_KEY] ?? '';
+      const currentStage = options[OPT_STAGE_KEY] ?? OPT_STAGE_DEFAULT;
+      const moderatorsValue = options[OPT_MODERATORS_KEY] ?? '';
 
       if (
         sessionRef.current !== currentSession ||
@@ -184,19 +189,7 @@ export const useSessionState = ({ session, localUser }) => {
         return;
       }
 
-      const legacyModValue = await fetchOption(
-        currentSession,
-        moderatorKey(currentUserId),
-        'false',
-      );
-
-      if (
-        sessionRef.current !== currentSession ||
-        requestId !== optionsRequestRef.current
-      ) {
-        return;
-      }
-
+      const legacyModValue = options[legacyModeratorKey] ?? 'false';
       const isLegacyModerator = legacyModValue === 'true';
       setIsModerator(isLegacyModerator);
 

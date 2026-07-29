@@ -45,3 +45,17 @@ export const fetchOption = async (session, optionKey, defaultValue) => {
 
   return defaultValue;
 };
+
+export const fetchOptions = async (session, keys) => {
+  const { data, error } = await supabase
+    .from('options')
+    .select('key,value')
+    .eq('session_name', session)
+    .in('key', keys);
+
+  if (error) {
+    throw new Error(JSON.stringify(error));
+  }
+
+  return Object.fromEntries((data || []).map(({ key, value }) => [key, value]));
+};
