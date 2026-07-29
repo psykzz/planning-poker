@@ -1,8 +1,9 @@
 import { supabase } from './client';
 
 const isMissingRoundsTableError = error => error?.code === 'PGRST205';
+const isDuplicateRoundError = error => error?.code === '23505';
 
-// Create a hash of scores for duplicate detection
+// Create a stable key for duplicate detection
 const hashScores = scores => {
   const normalized = scores
     .map(s => `${s.user_id}:${s.score}`)
@@ -28,38 +29,17 @@ export const saveRound = async (session, scores, users, label = '') => {
 
   const scoresHash = hashScores(scoresSnapshot);
 
-  // Check if a round with identical scores was created in the last 10 seconds
-  const tenSecondsAgo = new Date(Date.now() - 10000).toISOString();
-  const { data: recentRounds, error: queryError } = await supabase
-    .from('rounds')
-    .select('id, scores')
-    .eq('session_name', session)
-    .gte('created_at', tenSecondsAgo)
-    .limit(10);
-
-  if (!queryError && recentRounds && recentRounds.length > 0) {
-    // Check if any recent round has identical scores
-    for (const round of recentRounds) {
-      const recentHash = hashScores(round.scores);
-      if (recentHash === scoresHash) {
-        console.warn(
-          'Skipping duplicate round - identical scores found in recent round',
-        );
-        return;
-      }
-    }
-  }
-
   const { error } = await supabase.from('rounds').insert([
     {
       session_name: session,
       label: label?.trim() || '',
       scores: scoresSnapshot,
+      scores_hash: scoresHash,
     },
   ]);
 
   if (error) {
-    if (isMissingRoundsTableError(error)) {
+    if (isMissingRoundsTableError(error) || isDuplicateRoundError(error)) {
       return;
     }
     throw new Error(JSON.stringify(error));
