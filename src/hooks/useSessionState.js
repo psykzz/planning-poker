@@ -15,7 +15,7 @@ import {
   OPT_STAGE_DEFAULT,
   moderatorKey,
 } from '../api/options';
-import { deleteScore, fetchScores, updateAllScores } from '../api/scores';
+import { deleteScore, fetchScores } from '../api/scores';
 import { createUser, fetchAllUsers, updateUserPresence } from '../api/users';
 
 export const REMOVE_SCORE = '-';
@@ -24,8 +24,6 @@ export const POINT_SEQUENCES = {
   scrum: [REMOVE_SCORE, '☕', '?', 0, 1, 2, 3, 5, 8, 13, 20, 40, 100],
   standard: [REMOVE_SCORE, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 };
-const POINT_SEQUENCES_SORTED = Object.keys(POINT_SEQUENCES).sort();
-
 function parseISOString(s) {
   const b = s.split(/\D+/);
   return new Date(Date.UTC(b[0], --b[1], b[2], b[3], b[4], b[5], b[6]));
@@ -67,13 +65,7 @@ export const useSessionState = ({ session, localUser }) => {
     userIdRef.current = user?.id;
   }, [user?.id]);
 
-  const showScores = scores.length > 0 && scores.every(score => score.revealed);
   const isSpectator = Boolean(user?.is_spectator);
-  const nextSequence =
-    POINT_SEQUENCES_SORTED[
-      (POINT_SEQUENCES_SORTED.indexOf(sequence) + 1) %
-        POINT_SEQUENCES_SORTED.length
-    ];
 
   const updateUsers = React.useCallback(async currentSession => {
     if (!currentSession) return;
@@ -281,15 +273,6 @@ export const useSessionState = ({ session, localUser }) => {
     return () => window.removeEventListener('focus', onFocus);
   }, [user, session, updatePresence]);
 
-  const toggleScores = React.useCallback(
-    (shouldUpdateAllScores = true) => {
-      if (shouldUpdateAllScores) {
-        updateAllScores(session, !showScores);
-      }
-    },
-    [session, showScores],
-  );
-
   const toggleConfirm = React.useCallback(() => {
     const next = !confirmEnabled;
     setOptions(currentOptions => ({
@@ -298,14 +281,6 @@ export const useSessionState = ({ session, localUser }) => {
     }));
     submitOption(session, OPT_CONFIRM_KEY, next.toString());
   }, [session, confirmEnabled]);
-
-  const cycleSequence = React.useCallback(() => {
-    submitOption(session, OPT_POINT_KEY, nextSequence);
-    setOptions(currentOptions => ({
-      ...currentOptions,
-      sequence: nextSequence,
-    }));
-  }, [session, nextSequence]);
 
   const setModeratorStatus = React.useCallback(
     async value => {
@@ -400,15 +375,11 @@ export const useSessionState = ({ session, localUser }) => {
     scoresLoaded,
     confirmEnabled,
     sequence,
-    showScores,
-    nextSequence,
     stage,
     isModerator,
     isSpectator,
     sessionDisplayName,
-    toggleScores,
     toggleConfirm,
-    cycleSequence,
     setModeratorStatus,
     setSpectatorStatus,
     setSessionDisplayName,
