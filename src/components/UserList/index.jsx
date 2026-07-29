@@ -35,16 +35,19 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
       score => score.score >= 0,
     );
     const getNamesForValue = value =>
-      numericUserScores
-        .filter(score => score.score === value)
-        .map(score => userById[score.user_id]?.name || 'Unknown')
-        .filter((name, index, names) => names.indexOf(name) === index);
+      [
+        ...new Set(
+          numericUserScores
+            .filter(score => score.score === value)
+            .map(score => userById[score.user_id]?.name || 'Unknown'),
+        ),
+      ];
 
     return {
       highestUsers: getNamesForValue(highest),
       lowestUsers: getNamesForValue(lowest),
     };
-  }, [numericScores.length, highest, lowest, scoringUserScores, userById]);
+  }, [numericScores, highest, lowest, scoringUserScores, userById]);
 
   const formatSummaryStat = (value, names) => {
     if (value == null) return '-';
