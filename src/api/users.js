@@ -44,7 +44,7 @@ export const updateUserPresence = async (session, userId, last_presence) => {
 export const fetchAllUsers = async session => {
   let { data: users, error } = await supabase
     .from('users')
-    .select('*')
+    .select('id,name,is_spectator,last_presence')
     .eq('session_name', session);
 
   if (error) {
