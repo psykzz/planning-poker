@@ -43,19 +43,20 @@ export const useSessionState = ({ session, localUser }) => {
   const [users, setUsers] = React.useState([]);
   const [scores, setScores] = React.useState([]);
   const [scoresLoaded, setScoresLoaded] = React.useState(false);
-  const [confirmEnabled, setConfirmEnabled] = React.useState(
-    OPT_CONFIRM_DEFAULT === 'true',
-  );
-  const [sequence, setSequence] = React.useState(OPT_POINT_SEQ_DEFAULT);
+  const [options, setOptions] = React.useState({
+    confirmEnabled: OPT_CONFIRM_DEFAULT === 'true',
+    sequence: OPT_POINT_SEQ_DEFAULT,
+    sessionDisplayName: '',
+    stage: null,
+  });
   const [isModerator, setIsModerator] = React.useState(false);
-  const [sessionDisplayName, setSessionDisplayNameState] = React.useState('');
-  const [stage, setStageState] = React.useState(null);
   const sessionRef = React.useRef(session);
   const userIdRef = React.useRef();
   const usersRequestRef = React.useRef(0);
   const scoresRequestRef = React.useRef(0);
   const optionsRequestRef = React.useRef(0);
   const userRequestRef = React.useRef(0);
+  const { confirmEnabled, sequence, sessionDisplayName, stage } = options;
 
   React.useEffect(() => {
     sessionRef.current = session;
@@ -167,10 +168,12 @@ export const useSessionState = ({ session, localUser }) => {
         return;
       }
 
-      setSequence(pointSequence);
-      setConfirmEnabled(confirm === 'true');
-      setSessionDisplayNameState(displayName);
-      setStageState(currentStage);
+      setOptions({
+        sequence: pointSequence,
+        confirmEnabled: confirm === 'true',
+        sessionDisplayName: displayName,
+        stage: currentStage,
+      });
 
       if (!currentUserId) {
         setIsModerator(false);
@@ -229,10 +232,12 @@ export const useSessionState = ({ session, localUser }) => {
 
   React.useEffect(() => {
     if (!session) {
-      setConfirmEnabled(OPT_CONFIRM_DEFAULT === 'true');
-      setSequence(OPT_POINT_SEQ_DEFAULT);
-      setSessionDisplayNameState('');
-      setStageState(null);
+      setOptions({
+        confirmEnabled: OPT_CONFIRM_DEFAULT === 'true',
+        sequence: OPT_POINT_SEQ_DEFAULT,
+        sessionDisplayName: '',
+        stage: null,
+      });
       setIsModerator(false);
       return;
     }
@@ -300,13 +305,19 @@ export const useSessionState = ({ session, localUser }) => {
 
   const toggleConfirm = React.useCallback(() => {
     const next = !confirmEnabled;
-    setConfirmEnabled(next);
+    setOptions(currentOptions => ({
+      ...currentOptions,
+      confirmEnabled: next,
+    }));
     submitOption(session, OPT_CONFIRM_KEY, next.toString());
   }, [session, confirmEnabled]);
 
   const cycleSequence = React.useCallback(() => {
     submitOption(session, OPT_POINT_KEY, nextSequence);
-    setSequence(nextSequence);
+    setOptions(currentOptions => ({
+      ...currentOptions,
+      sequence: nextSequence,
+    }));
   }, [session, nextSequence]);
 
   const setModeratorStatus = React.useCallback(
@@ -332,7 +343,10 @@ export const useSessionState = ({ session, localUser }) => {
   const setSessionDisplayName = React.useCallback(
     name => {
       if (!session) return;
-      setSessionDisplayNameState(name);
+      setOptions(currentOptions => ({
+        ...currentOptions,
+        sessionDisplayName: name,
+      }));
       submitOption(session, OPT_SESSION_NAME_KEY, name);
     },
     [session],
@@ -383,7 +397,10 @@ export const useSessionState = ({ session, localUser }) => {
   const setStage = React.useCallback(
     value => {
       if (!session) return;
-      setStageState(value);
+      setOptions(currentOptions => ({
+        ...currentOptions,
+        stage: value,
+      }));
       submitOption(session, OPT_STAGE_KEY, value);
     },
     [session],
