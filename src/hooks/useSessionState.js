@@ -158,8 +158,7 @@ export const useSessionState = ({ session, localUser }) => {
         OPT_MODERATORS_KEY,
         ...(legacyModeratorKey ? [legacyModeratorKey] : []),
       ]);
-      const pointSequence =
-        options[OPT_POINT_KEY] ?? OPT_POINT_SEQ_DEFAULT;
+      const pointSequence = options[OPT_POINT_KEY] ?? OPT_POINT_SEQ_DEFAULT;
       const confirm = options[OPT_CONFIRM_KEY] ?? OPT_CONFIRM_DEFAULT;
       const displayName = options[OPT_SESSION_NAME_KEY] ?? '';
       const currentStage = options[OPT_STAGE_KEY] ?? OPT_STAGE_DEFAULT;
