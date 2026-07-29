@@ -89,6 +89,7 @@ The app reads and writes directly to Supabase from the browser. It expects these
 - `scores`: one score per user per session
 - `options`: per-session settings (point sequence, stage, moderators, confirmations)
 - `rounds`: historical snapshots saved when returning from results to voting
+- `cleanup_logs`: nightly stale-session cleanup results
 
 To recreate schema and policies, run [supabase/schema.sql](supabase/schema.sql) in the Supabase SQL editor.
 
@@ -101,6 +102,9 @@ The script will:
 - apply keys/indexes needed by upsert and session filters
 - enable RLS with permissive anon/authenticated policies
 - add realtime publication for `scores`, `options`, and `rounds`
+- schedule a nightly cleanup that removes sessions whose latest `last_presence` is
+  older than 30 days; cleanup counts are stored in `cleanup_logs` and emitted to
+  the Postgres log
 
 ## Runtime Notes
 
