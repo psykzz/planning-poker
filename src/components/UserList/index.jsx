@@ -3,7 +3,7 @@ import * as styles from './userlist.module.css';
 import { SCORE_ICON_MAP } from '../../api/scores';
 import { scoreStats } from '../../utils/scoreStats';
 
-const Score = React.memo(({ isMe, score, forceReveal }) => {
+const Score = React.memo(function Score({ isMe, score, forceReveal }) {
   if (!score) {
     return <div className={styles.score}>-</div>;
   }
@@ -17,7 +17,7 @@ const Score = React.memo(({ isMe, score, forceReveal }) => {
   );
 });
 
-const User = React.memo(({ user, isMe, score, forceReveal }) => {
+const User = React.memo(function User({ user, isMe, score, forceReveal }) {
   const hasSubmittedScore = !!score;
   return (
     <li
