@@ -12,6 +12,7 @@ export const ResultsScreen = ({ session, user: localUser }) => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [isResetting, setIsResetting] = React.useState(false);
+  const [roundLabel, setRoundLabel] = React.useState('');
   const { user, users, scores, confirmEnabled, stage, isModerator, isSpectator, sessionDisplayName, sequence, toggleConfirm, setModeratorStatus, setSpectatorStatus, setSessionDisplayName, setUserName, setStage } =
     useSessionState({ session, localUser });
   const { rounds, selectedRound, isViewingHistory, selectRound } =
@@ -33,7 +34,7 @@ export const ResultsScreen = ({ session, user: localUser }) => {
     ) {
       try {
         setIsResetting(true);
-        await resetScoresWithRound(session, scores, users);
+        await resetScoresWithRound(session, scores, users, roundLabel);
         setStage('voting');
       } catch (error) {
         toast.error('Could not reset scores. Please try again.');
@@ -42,7 +43,15 @@ export const ResultsScreen = ({ session, user: localUser }) => {
         setIsResetting(false);
       }
     }
-  }, [session, scores, users, isModerator, confirmEnabled, setStage]);
+  }, [
+    session,
+    scores,
+    users,
+    roundLabel,
+    isModerator,
+    confirmEnabled,
+    setStage,
+  ]);
 
   return (
     <div className={styles.container}>
@@ -83,6 +92,16 @@ export const ResultsScreen = ({ session, user: localUser }) => {
       </div>
 
       <div className={styles.actions}>
+        <label className={styles.label_input}>
+          Round label
+          <input
+            type="text"
+            value={roundLabel}
+            placeholder="e.g. PROJ-123 — Add login page"
+            onChange={event => setRoundLabel(event.target.value)}
+            disabled={!isModerator || isResetting}
+          />
+        </label>
         <button
           type="button"
           className={styles.route}

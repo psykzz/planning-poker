@@ -38,9 +38,27 @@
 
 .actions {
   display: flex;
+  align-items: end;
   justify-content: center;
   gap: 12px;
   margin: 16px 0 8px;
+}
+
+.label_input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-color-subtle);
+  font-size: 0.85rem;
+}
+
+.label_input input {
+  min-width: min(360px, 60vw);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  color: var(--text-color);
+  background: var(--surface-accent);
 }
 
 .route {
@@ -107,6 +125,10 @@
   .actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .label_input input {
+    min-width: 0;
   }
 
   .route {

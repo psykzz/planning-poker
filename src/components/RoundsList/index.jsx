@@ -86,6 +86,9 @@ export const RoundsList = ({ rounds, selectedRound, onSelectRound }) => {
                     <span className={styles.time}>
                       {formatTime(round.created_at)}
                     </span>
+                    {round.label && (
+                      <span className={styles.label}>{round.label}</span>
+                    )}
                     <span className={styles.participants}>
                       {round.scores.length}{' '}
                       {round.scores.length === 1 ? 'vote' : 'votes'}

@@ -116,7 +116,12 @@ test('full voting session flow: join → vote → open results → back to votin
   await expect(page.getByRole('heading', { level: 1, name: /Results/i })).toBeVisible({ timeout: 10000 });
   log('Results page visible', { url: page.url() });
 
-  // ── Step 7: Reset back to voting ─────────────────────────────────────────
+  // ── Step 7: Label the round before saving it ───────────────────────────────
+  const roundLabel = 'PROJ-123 - Add login page';
+  await page.getByPlaceholder('e.g. PROJ-123 — Add login page').fill(roundLabel);
+  await expect(page.getByDisplayValue(roundLabel)).toBeVisible();
+
+  // ── Step 8: Reset back to voting ─────────────────────────────────────────
   await page.getByRole('button', { name: 'Back to voting' }).click();
   log('Clicked back to voting');
 
@@ -128,4 +133,15 @@ test('full voting session flow: join → vote → open results → back to votin
     .toBe(`#${SESSION_ID}`);
   await expect(page.getByRole('heading', { level: 1, name: /Voting/i })).toBeVisible({ timeout: 10000 });
   log('Returned to voting page', { url: page.url() });
+
+  // ── Step 9: Confirm the saved label appears in round history ──────────────
+  if (await openSessionMenuButton.isVisible()) {
+    await openSessionMenuButton.click();
+  }
+  const todayRounds = page.getByRole('button', { name: /Today/ });
+  await expect(todayRounds).toBeVisible({ timeout: 10000 });
+  await todayRounds.click();
+  await expect(page.getByText(roundLabel, { exact: true })).toBeVisible({
+    timeout: 10000,
+  });
 });
