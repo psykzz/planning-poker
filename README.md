@@ -84,15 +84,15 @@ If deploying under a subpath, set `DEPLOY_TARGET` in Netlify build environment v
 
 The app reads and writes directly to Supabase from the browser. It expects these public tables:
 
-- `users`: session members and their `last_presence`
 - `users`: session members with `is_spectator` role and `last_presence`
 - `scores`: one score per user per session
 - `options`: per-session settings (point sequence, stage, moderators, confirmations)
 - `rounds`: historical snapshots saved when returning from results to voting
+- `cleanup_logs`: nightly stale-session cleanup results
 
 To recreate schema and policies, run [supabase/schema.sql](supabase/schema.sql) in the Supabase SQL editor.
 
-For an existing database, apply [supabase/migrations/20260730195700_add_round_labels.sql](supabase/migrations/20260730195700_add_round_labels.sql) to add the round label column without recreating tables. Apply [supabase/migrations/20260731000000_add_round_scores_hash.sql](supabase/migrations/20260731000000_add_round_scores_hash.sql) to add the `scores_hash` column and unique constraint used for database-level duplicate round detection. Apply [supabase/migrations/20260731000001_publish_users_realtime.sql](supabase/migrations/20260731000001_publish_users_realtime.sql) to add the `users` table to the realtime publication.
+For an existing database, apply [supabase/migrations/20260730195700_add_round_labels.sql](supabase/migrations/20260730195700_add_round_labels.sql) to add the round label column without recreating tables. Apply [supabase/migrations/20260731000000_add_round_scores_hash.sql](supabase/migrations/20260731000000_add_round_scores_hash.sql) to add the `scores_hash` column and unique constraint used for database-level duplicate round detection. Apply [supabase/migrations/20260731000001_publish_users_realtime.sql](supabase/migrations/20260731000001_publish_users_realtime.sql) to add the `users` table to the realtime publication. Apply [supabase/migrations/20260731000002_add_stale_session_cleanup.sql](supabase/migrations/20260731000002_add_stale_session_cleanup.sql) to add the nightly stale-session cleanup job and `cleanup_logs` table.
 
 The script will:
 
@@ -101,6 +101,9 @@ The script will:
 - apply keys/indexes needed by upsert and session filters
 - enable RLS with permissive anon/authenticated policies
 - add realtime publication for `scores`, `options`, and `rounds`
+- schedule a nightly cleanup that removes sessions whose latest `last_presence` is
+  older than 30 days; cleanup counts are stored in `cleanup_logs` and emitted to
+  the Postgres log
 
 ## Runtime Notes
 

@@ -51,4 +51,4 @@ A heartbeat mechanism tracking active Users. Users update `last_presence` every 
 
 - **Reveal/Hide toggle** — Legacy UI that should be removed. "Open results" is the intended reveal mechanism.
 - **AFK score bug** — Scores from inactive Users are currently counted. Should be filtered to active Users only.
-- **No data cleanup** — Stale sessions accumulate indefinitely. Need cleanup mechanism for sessions with no activity for extended periods.
+- **Data cleanup** — Addressed by the nightly Supabase cleanup job, which removes sessions with no user activity for 30+ days.
