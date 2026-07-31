@@ -17,7 +17,6 @@ export const addSubscription = (session, dbTable, callback) => {
         filter: `session_name=eq.${session}`,
       },
       payload => {
-        console.log(`${dbTable} change received`, payload);
         callback(payload);
       },
     )
