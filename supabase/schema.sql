@@ -55,7 +55,7 @@ create table public.rounds (
   session_name text not null,
   label text default '',
   scores jsonb not null default '[]'::jsonb,
-  scores_hash text not null,
+  scores_hash text,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   unique (session_name, scores_hash)
