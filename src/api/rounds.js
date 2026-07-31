@@ -11,7 +11,7 @@ const hashScores = scores => {
   return normalized;
 };
 
-export const saveRound = async (session, scores, users) => {
+export const saveRound = async (session, scores, users, label = '') => {
   if (!scores || scores.length === 0) {
     return; // Don't save empty rounds
   }
@@ -53,6 +53,7 @@ export const saveRound = async (session, scores, users) => {
   const { error } = await supabase.from('rounds').insert([
     {
       session_name: session,
+      label: label?.trim() || '',
       scores: scoresSnapshot,
     },
   ]);
@@ -94,11 +95,16 @@ export const deleteRound = async roundId => {
 };
 
 // Helper to reset scores and save a round snapshot
-export const resetScoresWithRound = async (session, scores, users) => {
+export const resetScoresWithRound = async (
+  session,
+  scores,
+  users,
+  label = '',
+) => {
   // Only save round if there are scores to save
   if (scores && scores.length > 0) {
     try {
-      await saveRound(session, scores, users);
+      await saveRound(session, scores, users, label);
     } catch (err) {
       // Silently ignore round save errors - rounds table might not exist yet
       console.warn('Failed to save round:', err);

@@ -53,6 +53,7 @@ create table public.scores (
 create table public.rounds (
   id uuid primary key default gen_random_uuid(),
   session_name text not null,
+  label text default '',
   scores jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
