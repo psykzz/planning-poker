@@ -84,7 +84,6 @@ If deploying under a subpath, set `DEPLOY_TARGET` in Netlify build environment v
 
 The app reads and writes directly to Supabase from the browser. It expects these public tables:
 
-- `users`: session members and their `last_presence`
 - `users`: session members with `is_spectator` role and `last_presence`
 - `scores`: one score per user per session
 - `options`: per-session settings (point sequence, stage, moderators, confirmations)
@@ -93,7 +92,7 @@ The app reads and writes directly to Supabase from the browser. It expects these
 
 To recreate schema and policies, run [supabase/schema.sql](supabase/schema.sql) in the Supabase SQL editor.
 
-For an existing database, apply [supabase/migrations/20260730195700_add_round_labels.sql](supabase/migrations/20260730195700_add_round_labels.sql) to add the round label column without recreating tables. Apply [supabase/migrations/20260731000000_add_round_scores_hash.sql](supabase/migrations/20260731000000_add_round_scores_hash.sql) to add the `scores_hash` column and unique constraint used for database-level duplicate round detection. Apply [supabase/migrations/20260731000001_publish_users_realtime.sql](supabase/migrations/20260731000001_publish_users_realtime.sql) to add the `users` table to the realtime publication.
+For an existing database, apply [supabase/migrations/20260730195700_add_round_labels.sql](supabase/migrations/20260730195700_add_round_labels.sql) to add the round label column without recreating tables. Apply [supabase/migrations/20260731000000_add_round_scores_hash.sql](supabase/migrations/20260731000000_add_round_scores_hash.sql) to add the `scores_hash` column and unique constraint used for database-level duplicate round detection. Apply [supabase/migrations/20260731000001_publish_users_realtime.sql](supabase/migrations/20260731000001_publish_users_realtime.sql) to add the `users` table to the realtime publication. Apply [supabase/migrations/20260731000002_add_stale_session_cleanup.sql](supabase/migrations/20260731000002_add_stale_session_cleanup.sql) to add the nightly stale-session cleanup job and `cleanup_logs` table.
 
 The script will:
 
