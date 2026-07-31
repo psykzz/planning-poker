@@ -2,11 +2,11 @@ import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
-import { useCopyToClipboard } from 'react-use';
 import { ScoreCards } from '../ScoreCards';
 import { UserList } from '../UserList';
 import { POINT_SEQUENCES, useSessionState } from '../../hooks/useSessionState';
 import { resetScoresWithRound } from '../../api/rounds';
+import { useCopyToClipboard } from '../../utils/useCopyToClipboard';
 import * as styles from './planningpoker.module.css';
 
 const CopySession = session => {
