@@ -235,7 +235,7 @@ export const useSessionState = ({ session, localUser }) => {
 
     updateSessionOptions(session, userIdRef.current);
     return () => removeSubscription(subscriptionId);
-  }, [session, updateSessionOptions]);
+  }, [session, user?.id, updateSessionOptions]);
 
   React.useEffect(() => {
     if (!session) {
@@ -250,10 +250,6 @@ export const useSessionState = ({ session, localUser }) => {
     updateUsers(session);
     return () => removeSubscription(subscriptionId);
   }, [session, updateUsers]);
-
-  React.useEffect(() => {
-    updateSessionOptions(session, user?.id);
-  }, [session, user?.id, updateSessionOptions]);
 
   React.useEffect(() => {
     getOrCreateUser(session, localUser);
