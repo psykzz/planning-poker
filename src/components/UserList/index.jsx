@@ -16,7 +16,7 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
     () =>
       (scores || []).filter(score => {
         const scoreUser = userById[score.user_id];
-        return !scoreUser?.is_spectator;
+        return scoreUser && !scoreUser.is_spectator;
       }),
     [scores, userById],
   );
