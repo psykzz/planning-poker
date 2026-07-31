@@ -3,6 +3,37 @@ import * as styles from './userlist.module.css';
 import { SCORE_ICON_MAP } from '../../api/scores';
 import { scoreStats } from '../../utils/scoreStats';
 
+const Score = React.memo(function Score({ isMe, score, forceReveal }) {
+  if (!score) {
+    return <div className={styles.score}>-</div>;
+  }
+  if (!forceReveal && !score.revealed && !isMe) {
+    return <div className={styles.score}>?</div>;
+  }
+  return (
+    <div className={styles.score}>
+      {SCORE_ICON_MAP[score.score.toString()] || score.score}
+    </div>
+  );
+});
+
+const User = React.memo(function User({ user, isMe, score, forceReveal }) {
+  const hasSubmittedScore = !!score;
+  return (
+    <li
+      className={`${styles.user} ${isMe && styles.self} ${hasSubmittedScore && styles.has_score}`}
+    >
+      <div className={`${styles.name} ${isMe ? styles.me : ''}`}>
+        {user.name}
+        {isMe ? ' (You)' : ''}
+      </div>
+      <div className={`${styles.card} ${styles.no_hover}`}>
+        <Score {...{ isMe, score, forceReveal }} />
+      </div>
+    </li>
+  );
+});
+
 export const UserList = ({ me, users, scores, forceReveal = false }) => {
   const userById = React.useMemo(() => {
     const byId = {};
@@ -84,40 +115,6 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
     };
   }, [users, showScores, scoreByUser]);
 
-  const Score = ({ isMe, score }) => {
-    if (!score) {
-      return <div className={styles.score}>-</div>;
-    }
-    if (!forceReveal && !score.revealed && !isMe) {
-      return <div className={styles.score}>?</div>;
-    }
-    return (
-      <div className={styles.score}>
-        {SCORE_ICON_MAP[score.score.toString()] || score.score}
-      </div>
-    );
-  };
-
-  const User = ({ user }) => {
-    const isMe = user.id === me?.id;
-    const score = scoreByUser[user.id];
-    const hasSubmittedScore = !!score;
-    return (
-      <li
-        key={user.id}
-        className={`${styles.user} ${isMe && styles.self} ${hasSubmittedScore && styles.has_score}`}
-      >
-        <div className={`${styles.name} ${isMe ? styles.me : ''}`}>
-          {user.name}
-          {isMe ? ' (You)' : ''}
-        </div>
-        <div className={`${styles.card} ${styles.no_hover}`}>
-          <Score {...{ isMe, score }} />
-        </div>
-      </li>
-    );
-  };
-
   return (
     <section
       className={`${styles.user_list} ${
@@ -137,7 +134,13 @@ export const UserList = ({ me, users, scores, forceReveal = false }) => {
       )}
       <ul className={styles.users}>
         {votingUsers?.map(user => (
-          <User key={user.id} user={user} />
+          <User
+            key={user.id}
+            user={user}
+            isMe={user.id === me?.id}
+            score={scoreByUser[user.id]}
+            forceReveal={forceReveal}
+          />
         ))}
       </ul>
 
