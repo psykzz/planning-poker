@@ -55,6 +55,8 @@ export const useSessionState = ({ session, localUser }) => {
   const scoresRequestRef = React.useRef(0);
   const optionsRequestRef = React.useRef(0);
   const userRequestRef = React.useRef(0);
+  const isModeratorUpdatePendingRef = React.useRef(false);
+  const moderatorStateVersionRef = React.useRef(0);
   const { confirmEnabled, sequence, sessionDisplayName, stage } = options;
 
   React.useEffect(() => {
@@ -139,6 +141,7 @@ export const useSessionState = ({ session, localUser }) => {
     async (currentSession, currentUserId) => {
       if (!currentSession) return;
       const requestId = ++optionsRequestRef.current;
+      const moderatorStateVersion = moderatorStateVersionRef.current;
       const legacyModeratorKey = currentUserId
         ? moderatorKey(currentUserId)
         : null;
@@ -172,6 +175,13 @@ export const useSessionState = ({ session, localUser }) => {
 
       if (!currentUserId) {
         setIsModerator(false);
+        return;
+      }
+
+      if (
+        isModeratorUpdatePendingRef.current ||
+        moderatorStateVersion !== moderatorStateVersionRef.current
+      ) {
         return;
       }
 
@@ -285,19 +295,31 @@ export const useSessionState = ({ session, localUser }) => {
   const setModeratorStatus = React.useCallback(
     async value => {
       if (!session || !user?.id) return;
+      isModeratorUpdatePendingRef.current = true;
+      moderatorStateVersionRef.current += 1;
       setIsModerator(value);
 
-      const moderatorsValue = await fetchOption(
-        session,
-        OPT_MODERATORS_KEY,
-        '',
-      );
-      const moderatorIds = parseModeratorIds(moderatorsValue);
-      const nextModeratorIds = value
-        ? [...new Set([...moderatorIds, user.id])]
-        : moderatorIds.filter(currentId => currentId !== user.id);
+      try {
+        const moderatorsValue = await fetchOption(
+          session,
+          OPT_MODERATORS_KEY,
+          '',
+        );
+        const moderatorIds = parseModeratorIds(moderatorsValue);
+        const nextModeratorIds = value
+          ? [...new Set([...moderatorIds, user.id])]
+          : moderatorIds.filter(currentId => currentId !== user.id);
 
-      submitOption(session, OPT_MODERATORS_KEY, nextModeratorIds.join(','));
+        await submitOption(
+          session,
+          OPT_MODERATORS_KEY,
+          nextModeratorIds.join(','),
+        );
+        setIsModerator(value);
+      } finally {
+        isModeratorUpdatePendingRef.current = false;
+        moderatorStateVersionRef.current += 1;
+      }
     },
     [session, user],
   );

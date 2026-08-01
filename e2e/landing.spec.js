@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('landing page loads with key content', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
 
   await expect(page).toHaveTitle('Planning Poker');
   await expect(page.getByRole('heading', { name: 'Planning Poker for agile teams' })).toBeVisible();
@@ -10,7 +10,7 @@ test('landing page loads with key content', async ({ page }) => {
 });
 
 test('landing page shows how-it-works steps', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
 
   await expect(page.getByText('Create a session')).toBeVisible();
   await expect(page.getByText('Everyone joins')).toBeVisible();
@@ -18,7 +18,7 @@ test('landing page shows how-it-works steps', async ({ page }) => {
 });
 
 test('SSR test page is not available', async ({ page }) => {
-  const response = await page.goto('/ssr');
+  const response = await page.goto('ssr/');
 
   expect(response?.status()).toBe(404);
 });

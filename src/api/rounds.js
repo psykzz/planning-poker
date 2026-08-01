@@ -1,6 +1,7 @@
 import { supabase } from './client';
 
 const isMissingRoundsTableError = error => error?.code === 'PGRST205';
+const isMissingRoundColumnError = error => error?.code === 'PGRST204';
 const isDuplicateRoundError = error => error?.code === '23505';
 
 // Create a stable key for duplicate detection
@@ -29,14 +30,24 @@ export const saveRound = async (session, scores, users, label = '') => {
 
   const scoresHash = hashScores(scoresSnapshot);
 
-  const { error } = await supabase.from('rounds').insert([
-    {
-      session_name: session,
-      label: label?.trim() || '',
-      scores: scoresSnapshot,
-      scores_hash: scoresHash,
-    },
-  ]);
+  const round = {
+    session_name: session,
+    scores: scoresSnapshot,
+    scores_hash: scoresHash,
+  };
+  const roundLabel = label?.trim();
+
+  if (roundLabel) {
+    round.label = roundLabel;
+  }
+
+  let { error } = await supabase.from('rounds').insert([round]);
+
+  if (isMissingRoundColumnError(error)) {
+    ({ error } = await supabase
+      .from('rounds')
+      .insert([{ session_name: session, scores: scoresSnapshot }]));
+  }
 
   if (error) {
     if (isMissingRoundsTableError(error) || isDuplicateRoundError(error)) {
